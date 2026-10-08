@@ -1,13 +1,13 @@
+import { PageHeader } from "../components/ui/PageHeader";
+
 export function DashboardPage() {
   return (
     <div>
-      <div className="page-header">
-        <div>
-          <span className="eyebrow">Overview</span>
-          <h1>Warehouse Dashboard</h1>
-          <p>Monitor inventory and warehouse activity.</p>
-        </div>
-      </div>
+      <PageHeader
+        eyebrow="Overview"
+        title="Warehouse Dashboard"
+        description="Monitor inventory and warehouse activity."
+      />
 
       <div className="metric-grid">
         <div className="metric-card">

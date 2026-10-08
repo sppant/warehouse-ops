@@ -1,0 +1,53 @@
+:root {
+  --color-bg: #080a0d;
+  --color-surface: #101419;
+  --color-surface-elevated: #161b22;
+  --color-surface-hover: #1b222b;
+
+  --color-border: #252c35;
+  --color-border-strong: #343d48;
+
+  --color-text: #f2f5f7;
+  --color-text-secondary: #b1bac5;
+  --color-text-muted: #7d8794;
+
+  --color-accent: #b7ff3c;
+  --color-accent-hover: #c7ff69;
+  --color-accent-soft: rgb(183 255 60 / 10%);
+  --color-accent-glow: rgb(183 255 60 / 22%);
+
+  --color-success: #42d392;
+  --color-success-soft: rgb(66 211 146 / 10%);
+
+  --color-warning: #f5b942;
+  --color-warning-soft: rgb(245 185 66 / 10%);
+
+  --color-danger: #ff5c5c;
+  --color-danger-soft: rgb(255 92 92 / 10%);
+
+  --color-info: #45d6e8;
+  --color-info-soft: rgb(69 214 232 / 10%);
+
+  --radius-sm: 6px;
+  --radius-md: 10px;
+  --radius-lg: 14px;
+
+  --space-1: 4px;
+  --space-2: 8px;
+  --space-3: 12px;
+  --space-4: 16px;
+  --space-5: 20px;
+  --space-6: 24px;
+  --space-8: 32px;
+  --space-10: 40px;
+  --space-12: 48px;
+
+  --shadow-sm: 0 2px 8px rgb(0 0 0 / 20%);
+  --shadow-md: 0 8px 24px rgb(0 0 0 / 25%);
+  --shadow-accent: 0 0 24px var(--color-accent-glow);
+
+  --sidebar-width: 240px;
+  --topbar-height: 68px;
+
+  --font-sans: "DM Sans", system-ui, sans-serif;
+}
