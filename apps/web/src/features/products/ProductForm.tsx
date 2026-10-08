@@ -18,15 +18,19 @@ const productFormSchema = z.object({
     .optional(),
 });
 
-type ProductFormValues = z.infer<typeof productFormSchema>;
+export type ProductFormValues = z.infer<typeof productFormSchema>;
 
 type ProductFormProps = {
+  initialValues?: Partial<ProductFormValues>;
+  submitLabel?: string;
   onSubmit: (values: ProductFormValues) => void | Promise<void>;
   onCancel: () => void;
   isSubmitting?: boolean;
 };
 
 export function ProductForm({
+  initialValues,
+  submitLabel = "Create product",
   onSubmit,
   onCancel,
   isSubmitting = false,
@@ -37,6 +41,13 @@ export function ProductForm({
     formState: { errors },
   } = useForm<ProductFormValues>({
     resolver: zodResolver(productFormSchema),
+    defaultValues: {
+      sku: initialValues?.sku ?? "",
+      name: initialValues?.name ?? "",
+      description: initialValues?.description ?? "",
+      unitCost: initialValues?.unitCost ?? 0,
+      unitWeightGrams: initialValues?.unitWeightGrams,
+    },
   });
 
   return (
@@ -84,7 +95,6 @@ export function ProductForm({
           type="number"
           step="0.01"
           min="0"
-          placeholder="0.00"
           {...register("unitCost", { valueAsNumber: true })}
         />
         {errors.unitCost && (
@@ -114,7 +124,7 @@ export function ProductForm({
         </Button>
 
         <Button type="submit" disabled={isSubmitting}>
-          {isSubmitting ? "Creating..." : "Create product"}
+          {isSubmitting ? "Saving..." : submitLabel}
         </Button>
       </div>
     </form>

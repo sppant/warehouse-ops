@@ -4,15 +4,21 @@ import { Badge } from "../components/ui/Badge";
 import { Button } from "../components/ui/Button";
 import { Card } from "../components/ui/Card";
 import { Input } from "../components/ui/Input";
-import { PageHeader } from "../components/ui/PageHeader";
 import { Modal } from "../components/ui/Modal";
+import { PageHeader } from "../components/ui/PageHeader";
 import { ProductForm } from "../features/products/ProductForm";
-import { createProduct } from "../features/products/api";
-import { getProducts } from "../features/products/api";
+import {
+  createProduct,
+  getProducts,
+  updateProduct,
+  type Product,
+} from "../features/products/api";
 
 export function ProductsPage() {
   const [search, setSearch] = useState("");
   const [isCreateOpen, setIsCreateOpen] = useState(false);
+  const [editingProduct, setEditingProduct] = useState<Product | null>(null);
+
   const queryClient = useQueryClient();
 
   const productsQuery = useQuery({
@@ -26,7 +32,25 @@ export function ProductsPage() {
       await queryClient.invalidateQueries({
         queryKey: ["products"],
       });
+
       setIsCreateOpen(false);
+    },
+  });
+
+  const updateMutation = useMutation({
+    mutationFn: ({
+      id,
+      values,
+    }: {
+      id: string;
+      values: Parameters<typeof updateProduct>[1];
+    }) => updateProduct(id, values),
+    onSuccess: async () => {
+      await queryClient.invalidateQueries({
+        queryKey: ["products"],
+      });
+
+      setEditingProduct(null);
     },
   });
 
@@ -81,6 +105,7 @@ export function ProductsPage() {
                   <th>Unit cost</th>
                   <th>Weight</th>
                   <th>Status</th>
+                  <th />
                 </tr>
               </thead>
 
@@ -112,6 +137,15 @@ export function ProductsPage() {
                       <Badge variant={product.isActive ? "success" : "neutral"}>
                         {product.isActive ? "Active" : "Inactive"}
                       </Badge>
+                    </td>
+
+                    <td>
+                      <Button
+                        variant="ghost"
+                        onClick={() => setEditingProduct(product)}
+                      >
+                        Edit
+                      </Button>
                     </td>
                   </tr>
                 ))}
@@ -146,6 +180,47 @@ export function ProductsPage() {
           onCancel={() => setIsCreateOpen(false)}
           isSubmitting={createMutation.isPending}
         />
+      </Modal>
+
+      <Modal
+        open={editingProduct !== null}
+        title="Edit product"
+        description="Update the product catalog information."
+        onClose={() => {
+          if (!updateMutation.isPending) {
+            setEditingProduct(null);
+          }
+        }}
+      >
+        {updateMutation.isError && (
+          <div className="form-error form-server-error">
+            {updateMutation.error instanceof Error
+              ? updateMutation.error.message
+              : "Unable to update product."}
+          </div>
+        )}
+
+        {editingProduct && (
+          <ProductForm
+            initialValues={{
+              sku: editingProduct.sku,
+              name: editingProduct.name,
+              description: editingProduct.description ?? "",
+              unitCost: Number(editingProduct.unitCost),
+              unitWeightGrams:
+                editingProduct.unitWeightGrams ?? undefined,
+            }}
+            submitLabel="Save changes"
+            onSubmit={async (values) => {
+              await updateMutation.mutateAsync({
+                id: editingProduct.id,
+                values,
+              });
+            }}
+            onCancel={() => setEditingProduct(null)}
+            isSubmitting={updateMutation.isPending}
+          />
+        )}
       </Modal>
     </div>
   );

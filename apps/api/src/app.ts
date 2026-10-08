@@ -8,7 +8,12 @@ export const buildApp = () => {
     logger: false,
   });
 
-  app.register(cors);
+  app.register(cors, {
+    origin: true,
+    methods: ["GET", "POST", "PATCH", "PUT", "DELETE", "OPTIONS"],
+    allowedHeaders: ["Content-Type"],
+  });
+
   app.register(helmet);
   app.register(productRoutes);
 
