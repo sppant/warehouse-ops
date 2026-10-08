@@ -1,17 +1,33 @@
-import { useQuery } from "@tanstack/react-query";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
 import { Badge } from "../components/ui/Badge";
+import { Button } from "../components/ui/Button";
 import { Card } from "../components/ui/Card";
 import { Input } from "../components/ui/Input";
 import { PageHeader } from "../components/ui/PageHeader";
+import { Modal } from "../components/ui/Modal";
+import { ProductForm } from "../features/products/ProductForm";
+import { createProduct } from "../features/products/api";
 import { getProducts } from "../features/products/api";
 
 export function ProductsPage() {
   const [search, setSearch] = useState("");
+  const [isCreateOpen, setIsCreateOpen] = useState(false);
+  const queryClient = useQueryClient();
 
   const productsQuery = useQuery({
     queryKey: ["products", search],
     queryFn: () => getProducts(search),
+  });
+
+  const createMutation = useMutation({
+    mutationFn: createProduct,
+    onSuccess: async () => {
+      await queryClient.invalidateQueries({
+        queryKey: ["products"],
+      });
+      setIsCreateOpen(false);
+    },
   });
 
   return (
@@ -20,6 +36,11 @@ export function ProductsPage() {
         eyebrow="Catalog"
         title="Products"
         description="Manage products and stock-keeping units."
+        actions={
+          <Button onClick={() => setIsCreateOpen(true)}>
+            Add product
+          </Button>
+        }
       />
 
       <Card className="products-card">
@@ -99,6 +120,33 @@ export function ProductsPage() {
           </div>
         )}
       </Card>
+
+      <Modal
+        open={isCreateOpen}
+        title="Create product"
+        description="Add a new product to the warehouse catalog."
+        onClose={() => {
+          if (!createMutation.isPending) {
+            setIsCreateOpen(false);
+          }
+        }}
+      >
+        {createMutation.isError && (
+          <div className="form-error form-server-error">
+            {createMutation.error instanceof Error
+              ? createMutation.error.message
+              : "Unable to create product."}
+          </div>
+        )}
+
+        <ProductForm
+          onSubmit={async (values) => {
+            await createMutation.mutateAsync(values);
+          }}
+          onCancel={() => setIsCreateOpen(false)}
+          isSubmitting={createMutation.isPending}
+        />
+      </Modal>
     </div>
   );
 }
