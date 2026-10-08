@@ -1,20 +1,7 @@
-import Fastify from "fastify";
-import cors from "@fastify/cors";
-import helmet from "@fastify/helmet";
+import { buildApp } from "./app.js";
 
 const start = async () => {
-  const app = Fastify({
-    logger: true,
-  });
-
-  await app.register(cors);
-  await app.register(helmet);
-
-  app.get("/health", async () => {
-    return {
-      status: "ok",
-    };
-  });
+  const app = buildApp();
 
   try {
     await app.listen({
