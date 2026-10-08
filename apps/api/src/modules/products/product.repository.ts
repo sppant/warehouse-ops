@@ -18,7 +18,7 @@ export const productRepository = {
       .orderBy(products.name);
   },
 
-  async findById(id: string) {
+  async findById(id: string): Promise<typeof products.$inferSelect | null> {
     const result = await db
       .select()
       .from(products)
