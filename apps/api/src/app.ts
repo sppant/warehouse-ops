@@ -4,6 +4,7 @@ import helmet from "@fastify/helmet";
 import { productRoutes } from "./modules/products/product.routes.js";
 import { warehouseRoutes } from "./modules/warehouses/warehouse.routes.js";
 import { inventoryRoutes } from "./modules/inventory/inventory.routes.js";
+import { purchaseOrderRoutes } from "./modules/purchase-orders/purchase-order.routes.js";
 
 export const buildApp = () => {
   const app = Fastify({
@@ -20,6 +21,7 @@ export const buildApp = () => {
   app.register(productRoutes);
   app.register(warehouseRoutes);
   app.register(inventoryRoutes);
+  app.register(purchaseOrderRoutes);
 
   app.get("/health", async () => {
     return {

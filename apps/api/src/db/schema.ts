@@ -20,6 +20,14 @@ export const stockMovementType = pgEnum("stock_movement_type", [
   "TRANSFER_OUT",
 ]);
 
+export const purchaseOrderStatus = pgEnum("purchase_order_status", [
+  "DRAFT",
+  "ORDERED",
+  "PARTIALLY_RECEIVED",
+  "RECEIVED",
+  "CANCELLED",
+]);
+
 export const warehouses = pgTable("warehouses", {
   id: uuid("id").defaultRandom().primaryKey(),
   code: text("code").notNull(),
@@ -92,5 +100,35 @@ export const stockMovements = pgTable("stock_movements", {
   referenceType: text("reference_type"),
   referenceId: uuid("reference_id"),
   reason: text("reason"),
+  createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
+});
+
+
+export const purchaseOrders = pgTable("purchase_orders", {
+  id: uuid("id").defaultRandom().primaryKey(),
+  orderNumber: text("order_number").notNull(),
+  supplier: text("supplier").notNull(),
+  status: purchaseOrderStatus("status").notNull().default("DRAFT"),
+  orderedAt: timestamp("ordered_at", { withTimezone: true }),
+  expectedAt: timestamp("expected_at", { withTimezone: true }),
+  createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
+}, (table) => [
+  uniqueIndex("purchase_orders_order_number_unique").on(table.orderNumber),
+]);
+
+export const purchaseOrderItems = pgTable("purchase_order_items", {
+  id: uuid("id").defaultRandom().primaryKey(),
+  purchaseOrderId: uuid("purchase_order_id")
+    .notNull()
+    .references(() => purchaseOrders.id),
+  productId: uuid("product_id")
+    .notNull()
+    .references(() => products.id),
+  orderedQuantity: integer("ordered_quantity").notNull(),
+  receivedQuantity: integer("received_quantity").notNull().default(0),
+  unitCost: numeric("unit_cost", {
+    precision: 12,
+    scale: 2,
+  }).notNull(),
   createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
 });
