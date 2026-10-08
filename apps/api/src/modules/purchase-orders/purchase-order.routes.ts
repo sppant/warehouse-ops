@@ -3,11 +3,14 @@ import {
   createPurchaseOrderSchema,
   purchaseOrderIdSchema,
   updatePurchaseOrderStatusSchema,
+  receivePurchaseOrderItemSchema,
 } from "./purchase-order.schema.js";
 import {
   ProductNotFoundError,
   PurchaseOrderAlreadyExistsError,
   PurchaseOrderNotFoundError,
+  PurchaseOrderItemNotFoundError,
+  InvalidPurchaseOrderReceiptError,
   purchaseOrderService,
 } from "./purchase-order.service.js";
 
@@ -109,4 +112,48 @@ export async function purchaseOrderRoutes(app: FastifyInstance) {
       throw error;
     }
   });
+
+  app.post(
+    "/api/purchase-orders/items/:itemId/receive",
+    async (request, reply) => {
+      const params = request.params as { itemId?: string };
+      const body = receivePurchaseOrderItemSchema.safeParse(request.body);
+
+      if (!params.itemId) {
+        return reply.status(400).send({
+          error: "Invalid purchase order item ID",
+        });
+      }
+
+      if (!body.success) {
+        return reply.status(400).send({
+          error: "Invalid receiving data",
+          details: body.error.flatten(),
+        });
+      }
+
+      try {
+        const data = await purchaseOrderService.receiveItem({
+          ...body.data,
+          purchaseOrderItemId: params.itemId,
+        });
+
+        return reply.status(201).send({ data });
+      } catch (error) {
+        if (error instanceof PurchaseOrderItemNotFoundError) {
+          return reply.status(404).send({
+            error: error.message,
+          });
+        }
+
+        if (error instanceof InvalidPurchaseOrderReceiptError) {
+          return reply.status(400).send({
+            error: error.message,
+          });
+        }
+
+        throw error;
+      }
+    },
+  );
 }

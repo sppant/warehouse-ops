@@ -3,6 +3,7 @@ import { products } from "../../db/schema.js";
 import { eq } from "drizzle-orm";
 import type {
   CreatePurchaseOrderInput,
+  ReceivePurchaseOrderItemInput,
   UpdatePurchaseOrderStatusInput,
 } from "./purchase-order.schema.js";
 import { purchaseOrderRepository } from "./purchase-order.repository.js";
@@ -25,6 +26,20 @@ export class PurchaseOrderAlreadyExistsError extends Error {
   constructor() {
     super("Purchase order number already exists");
     this.name = "PurchaseOrderAlreadyExistsError";
+  }
+}
+
+export class PurchaseOrderItemNotFoundError extends Error {
+  constructor() {
+    super("Purchase order item not found");
+    this.name = "PurchaseOrderItemNotFoundError";
+  }
+}
+
+export class InvalidPurchaseOrderReceiptError extends Error {
+  constructor(message: string) {
+    super(message);
+    this.name = "InvalidPurchaseOrderReceiptError";
   }
 }
 
@@ -114,5 +129,36 @@ export const purchaseOrderService = {
     }
 
     return order;
+  },
+
+  async receiveItem(input: ReceivePurchaseOrderItemInput) {
+    try {
+      return await purchaseOrderRepository.receiveItem(
+        input.purchaseOrderItemId,
+        input.locationId,
+        input.quantity,
+        input.reason,
+      );
+    } catch (error) {
+      if (
+        error instanceof Error &&
+        error.message === "Purchase order item not found"
+      ) {
+        throw new PurchaseOrderItemNotFoundError();
+      }
+
+      if (
+        error instanceof Error &&
+        (
+          error.message === "Location not found" ||
+          error.message === "Cannot receive a cancelled purchase order" ||
+          error.message === "Received quantity cannot exceed ordered quantity"
+        )
+      ) {
+        throw new InvalidPurchaseOrderReceiptError(error.message);
+      }
+
+      throw error;
+    }
   },
 };

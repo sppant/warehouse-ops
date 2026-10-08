@@ -36,3 +36,16 @@ export type CreatePurchaseOrderInput = z.infer<
 export type UpdatePurchaseOrderStatusInput = z.infer<
   typeof updatePurchaseOrderStatusSchema
 >;
+
+
+export const receivePurchaseOrderItemSchema = z.object({
+  locationId: z.uuid(),
+  quantity: z.number().int().positive(),
+  reason: z.string().trim().max(500).optional(),
+});
+
+export type ReceivePurchaseOrderItemInput = z.infer<
+  typeof receivePurchaseOrderItemSchema
+> & {
+  purchaseOrderItemId: string;
+};
