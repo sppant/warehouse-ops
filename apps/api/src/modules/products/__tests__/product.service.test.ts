@@ -50,6 +50,20 @@ describe("productService", () => {
     expect(result.unitCost).toBe("24.50");
   });
 
+  it("throws when a product SKU already exists", async () => {
+    vi.mocked(productRepository.create).mockRejectedValue({
+      code: "23505",
+    });
+
+    await expect(
+      productService.create({
+        sku: "SKU-001",
+        name: "Test Product",
+        unitCost: 24.5,
+      }),
+    ).rejects.toThrow("A product with this SKU already exists");
+  });
+
   it("throws when a product does not exist", async () => {
     vi.mocked(productRepository.findById).mockResolvedValue(null);
 

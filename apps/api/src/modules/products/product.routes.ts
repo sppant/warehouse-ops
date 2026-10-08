@@ -6,6 +6,7 @@ import {
 } from "./product.schema.js";
 import {
   ProductNotFoundError,
+  ProductSkuAlreadyExistsError,
   productService,
 } from "./product.service.js";
 
@@ -54,11 +55,21 @@ export async function productRoutes(app: FastifyInstance) {
       });
     }
 
-    const product = await productService.create(result.data);
+    try {
+      const product = await productService.create(result.data);
 
-    return reply.status(201).send({
-      data: product,
-    });
+      return reply.status(201).send({
+        data: product,
+      });
+    } catch (error) {
+      if (error instanceof ProductSkuAlreadyExistsError) {
+        return reply.status(409).send({
+          error: error.message,
+        });
+      }
+
+      throw error;
+    }
   });
 
   app.patch("/api/products/:id", async (request, reply) => {

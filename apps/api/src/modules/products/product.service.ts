@@ -11,6 +11,22 @@ export class ProductNotFoundError extends Error {
   }
 }
 
+export class ProductSkuAlreadyExistsError extends Error {
+  constructor() {
+    super("A product with this SKU already exists");
+    this.name = "ProductSkuAlreadyExistsError";
+  }
+}
+
+const isUniqueViolation = (error: unknown) => {
+  return (
+    typeof error === "object" &&
+    error !== null &&
+    "code" in error &&
+    error.code === "23505"
+  );
+};
+
 export const productService = {
   async list(search?: string) {
     return productRepository.findAll(search);
@@ -27,13 +43,21 @@ export const productService = {
   },
 
   async create(input: CreateProductInput) {
-    return productRepository.create({
-      sku: input.sku,
-      name: input.name,
-      description: input.description ?? null,
-      unitCost: input.unitCost.toFixed(2),
-      unitWeightGrams: input.unitWeightGrams ?? null,
-    });
+    try {
+      return await productRepository.create({
+        sku: input.sku,
+        name: input.name,
+        description: input.description ?? null,
+        unitCost: input.unitCost.toFixed(2),
+        unitWeightGrams: input.unitWeightGrams ?? null,
+      });
+    } catch (error) {
+      if (isUniqueViolation(error)) {
+        throw new ProductSkuAlreadyExistsError();
+      }
+
+      throw error;
+    }
   },
 
   async update(id: string, input: UpdateProductInput) {
