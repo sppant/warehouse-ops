@@ -7,6 +7,7 @@ import { OrdersPage } from "./pages/OrdersPage";
 import { ReceivingPage } from "./pages/ReceivingPage";
 import { LocationsPage } from "./pages/LocationsPage";
 import { CycleCountsPage } from "./pages/CycleCountsPage";
+import { PurchaseOrdersPage } from "./pages/PurchaseOrdersPage";
 
 function App() {
   return (
@@ -20,6 +21,7 @@ function App() {
           <Route path="/receiving" element={<ReceivingPage />} />
           <Route path="/locations" element={<LocationsPage />} />
           <Route path="/cycle-counts" element={<CycleCountsPage />} />
+          <Route path="/purchase-orders" element={<PurchaseOrdersPage />} />
         </Route>
       </Routes>
     </BrowserRouter>

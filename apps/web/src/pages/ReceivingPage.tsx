@@ -1,35 +1,40 @@
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-
 import { Button } from "../components/ui/Button";
 import { Card } from "../components/ui/Card";
 import { PageHeader } from "../components/ui/PageHeader";
 import {
-  getProducts,
-  type Product,
-} from "../features/products/api";
+  getPurchaseOrder,
+  getPurchaseOrders,
+  receivePurchaseOrderItem,
+  type PurchaseOrder,
+  type PurchaseOrderDetail,
+} from "../features/purchase-orders/api";
 import {
   getWarehouses,
   getLocations,
   type Warehouse,
   type Location,
 } from "../features/warehouses/api";
-import {
-  receiveStock,
-} from "../features/receiving/api";
 
 export function ReceivingPage() {
   const queryClient = useQueryClient();
-
-  const [productId, setProductId] = useState("");
+  const [purchaseOrderId, setPurchaseOrderId] = useState("");
+  const [purchaseOrderItemId, setPurchaseOrderItemId] = useState("");
   const [warehouseId, setWarehouseId] = useState("");
   const [locationId, setLocationId] = useState("");
   const [quantity, setQuantity] = useState("");
   const [reason, setReason] = useState("");
 
-  const productsQuery = useQuery({
-    queryKey: ["products"],
-    queryFn: () => getProducts(),
+  const ordersQuery = useQuery({
+    queryKey: ["purchase-orders"],
+    queryFn: getPurchaseOrders,
+  });
+
+  const orderDetailsQuery = useQuery({
+    queryKey: ["purchase-order", purchaseOrderId],
+    queryFn: () => getPurchaseOrder(purchaseOrderId),
+    enabled: Boolean(purchaseOrderId),
   });
 
   const warehousesQuery = useQuery({
@@ -43,46 +48,81 @@ export function ReceivingPage() {
     enabled: Boolean(warehouseId),
   });
 
-  useEffect(() => {
-    const products = productsQuery.data?.data ?? [];
+  const openOrders = useMemo(
+    () =>
+      (ordersQuery.data ?? []).filter(
+        (order: PurchaseOrder) =>
+          order.status === "ORDERED" ||
+          order.status === "PARTIALLY_RECEIVED",
+      ),
+    [ordersQuery.data],
+  );
 
-    if (!productId && products.length > 0) {
-      setProductId(products[0].id);
+  const selectedOrder: PurchaseOrderDetail | undefined =
+    orderDetailsQuery.data;
+
+  const receivableItems = useMemo(
+    () =>
+      (selectedOrder?.items ?? []).filter(
+        (item) => item.receivedQuantity < item.orderedQuantity,
+      ),
+    [selectedOrder],
+  );
+
+  useEffect(() => {
+    if (
+      openOrders.length > 0 &&
+      !openOrders.some((order) => order.id === purchaseOrderId)
+    ) {
+      setPurchaseOrderId(openOrders[0].id);
+      setPurchaseOrderItemId("");
     }
-  }, [productsQuery.data, productId]);
+
+    if (openOrders.length === 0 && purchaseOrderId) {
+      setPurchaseOrderId("");
+      setPurchaseOrderItemId("");
+    }
+  }, [openOrders, purchaseOrderId]);
+
+  useEffect(() => {
+    if (
+      receivableItems.length > 0 &&
+      !receivableItems.some((item) => item.id === purchaseOrderItemId)
+    ) {
+      setPurchaseOrderItemId(receivableItems[0].id);
+    }
+
+    if (receivableItems.length === 0 && purchaseOrderItemId) {
+      setPurchaseOrderItemId("");
+    }
+  }, [receivableItems, purchaseOrderItemId]);
 
   useEffect(() => {
     const warehouses = warehousesQuery.data?.data ?? [];
-
-    if (!warehouseId && warehouses.length > 0) {
+    if (
+      warehouses.length > 0 &&
+      !warehouses.some((warehouse: Warehouse) => warehouse.id === warehouseId)
+    ) {
       setWarehouseId(warehouses[0].id);
     }
   }, [warehousesQuery.data, warehouseId]);
 
   useEffect(() => {
     const locations = locationsQuery.data?.data ?? [];
-
-    if (locations.length === 0) {
-      setLocationId("");
-      return;
+    if (
+      locations.length > 0 &&
+      !locations.some((location: Location) => location.id === locationId)
+    ) {
+      setLocationId(locations[0].id);
     }
 
-    if (!locations.some((location) => location.id === locationId)) {
-      setLocationId(locations[0].id);
+    if (locations.length === 0 && locationId) {
+      setLocationId("");
     }
   }, [locationsQuery.data, locationId]);
 
-  const receiveMutation = useMutation({
-    mutationFn: receiveStock,
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["inventory"] });
-      setQuantity("");
-      setReason("");
-    },
-  });
-
-  const selectedProduct = (productsQuery.data?.data ?? []).find(
-    (product: Product) => product.id === productId,
+  const selectedItem = receivableItems.find(
+    (item) => item.id === purchaseOrderItemId,
   );
 
   const selectedWarehouse = (warehousesQuery.data?.data ?? []).find(
@@ -94,56 +134,118 @@ export function ReceivingPage() {
   );
 
   const quantityValue = Number(quantity);
+  const remainingQuantity = selectedItem
+    ? selectedItem.orderedQuantity - selectedItem.receivedQuantity
+    : 0;
+
+  const receiveMutation = useMutation({
+    mutationFn: () =>
+      receivePurchaseOrderItem(purchaseOrderItemId, {
+        locationId,
+        quantity: quantityValue,
+        reason: reason.trim() || undefined,
+      }),
+    onSuccess: async () => {
+      setQuantity("");
+      setReason("");
+      await Promise.all([
+        queryClient.invalidateQueries({ queryKey: ["inventory"] }),
+        queryClient.invalidateQueries({ queryKey: ["purchase-orders"] }),
+        queryClient.invalidateQueries({
+          queryKey: ["purchase-order", purchaseOrderId],
+        }),
+        ordersQuery.refetch(),
+        orderDetailsQuery.refetch(),
+      ]);
+    },
+  });
+
+
   const canSubmit =
-    Boolean(productId) &&
+    Boolean(purchaseOrderId) &&
+    Boolean(purchaseOrderItemId) &&
     Boolean(locationId) &&
     Number.isInteger(quantityValue) &&
     quantityValue > 0 &&
+    quantityValue <= remainingQuantity &&
+    !orderDetailsQuery.isLoading &&
     !receiveMutation.isPending;
 
-  const handleWarehouseChange = (value: string) => {
+  function handleWarehouseChange(value: string) {
     setWarehouseId(value);
     setLocationId("");
-  };
+  }
 
-  const handleSubmit = (event: React.FormEvent<HTMLFormElement>) => {
+  function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
-
     if (!canSubmit) {
       return;
     }
+    receiveMutation.mutate();
+  }
 
-    receiveMutation.mutate({
-      productId,
-      locationId,
-      quantity: quantityValue,
-      reason: reason.trim() || undefined,
-    });
-  };
+  const errorMessage =
+    receiveMutation.error instanceof Error
+      ? receiveMutation.error.message
+      : ordersQuery.error instanceof Error
+        ? ordersQuery.error.message
+        : orderDetailsQuery.error instanceof Error
+          ? orderDetailsQuery.error.message
+          : locationsQuery.error instanceof Error
+            ? locationsQuery.error.message
+            : "";
 
   return (
     <div className="page">
       <PageHeader
         title="Receiving"
-        description="Receive incoming stock into a warehouse location."
+        description="Receive purchase order items into a warehouse location."
       />
-
       <Card className="receiving-card">
         <div className="receiving-layout">
           <form className="receiving-form" onSubmit={handleSubmit}>
             <div className="receiving-section-label">Receipt details</div>
-
             <div className="receiving-fields">
-              <div className="receiving-field">
-                <label htmlFor="receiving-product">Product</label>
+              <div className="receiving-field receiving-field-full">
+                <label htmlFor="receiving-order">Purchase order</label>
                 <select
-                  id="receiving-product"
-                  value={productId}
-                  onChange={(event) => setProductId(event.target.value)}
+                  id="receiving-order"
+                  value={purchaseOrderId}
+                  onChange={(event) => {
+                    setPurchaseOrderId(event.target.value);
+                    setPurchaseOrderItemId("");
+                    setQuantity("");
+                  }}
+                  disabled={ordersQuery.isLoading || openOrders.length === 0}
                 >
-                  {(productsQuery.data?.data ?? []).map((product) => (
-                    <option key={product.id} value={product.id}>
-                      {product.sku} · {product.name}
+                  {openOrders.length === 0 && (
+                    <option value="">No open purchase orders</option>
+                  )}
+                  {openOrders.map((order) => (
+                    <option key={order.id} value={order.id}>
+                      {order.orderNumber} · {order.supplier} · {order.status.replaceAll("_", " ")}
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              <div className="receiving-field receiving-field-full">
+                <label htmlFor="receiving-item">Purchase order item</label>
+                <select
+                  id="receiving-item"
+                  value={purchaseOrderItemId}
+                  onChange={(event) => {
+                    setPurchaseOrderItemId(event.target.value);
+                    setQuantity("");
+                  }}
+                  disabled={orderDetailsQuery.isLoading || receivableItems.length === 0}
+                >
+                  {receivableItems.length === 0 && (
+                    <option value="">No outstanding items</option>
+                  )}
+                  {receivableItems.map((item) => (
+                    <option key={item.id} value={item.id}>
+                      {item.sku} · {item.productName} · {item.receivedQuantity}/{item.orderedQuantity} received
                     </option>
                   ))}
                 </select>
@@ -154,11 +256,10 @@ export function ReceivingPage() {
                 <select
                   id="receiving-warehouse"
                   value={warehouseId}
-                  onChange={(event) =>
-                    handleWarehouseChange(event.target.value)
-                  }
+                  onChange={(event) => handleWarehouseChange(event.target.value)}
+                  disabled={warehousesQuery.isLoading}
                 >
-                  {(warehousesQuery.data?.data ?? []).map((warehouse) => (
+                  {(warehousesQuery.data?.data ?? []).map((warehouse: Warehouse) => (
                     <option key={warehouse.id} value={warehouse.id}>
                       {warehouse.code} · {warehouse.name}
                     </option>
@@ -172,9 +273,9 @@ export function ReceivingPage() {
                   id="receiving-location"
                   value={locationId}
                   onChange={(event) => setLocationId(event.target.value)}
-                  disabled={locationsQuery.isLoading}
+                  disabled={locationsQuery.isLoading || (locationsQuery.data?.data ?? []).length === 0}
                 >
-                  {(locationsQuery.data?.data ?? []).map((location) => (
+                  {(locationsQuery.data?.data ?? []).map((location: Location) => (
                     <option key={location.id} value={location.id}>
                       {location.code} · {location.name}
                     </option>
@@ -189,11 +290,17 @@ export function ReceivingPage() {
                   className="receiving-quantity-input"
                   type="number"
                   min="1"
+                  max={remainingQuantity}
                   step="1"
                   value={quantity}
                   onChange={(event) => setQuantity(event.target.value)}
                   placeholder="0"
                 />
+                {selectedItem && (
+                  <span className="receiving-summary-label">
+                    {remainingQuantity} units remaining on this PO item
+                  </span>
+                )}
               </div>
 
               <div className="receiving-field receiving-field-full">
@@ -208,16 +315,27 @@ export function ReceivingPage() {
                 />
               </div>
 
-              {receiveMutation.isError && (
+              {ordersQuery.isLoading && (
+                <div className="receiving-status receiving-field-full">
+                  Loading purchase orders...
+                </div>
+              )}
+
+              {openOrders.length === 0 && !ordersQuery.isLoading && (
+                <div className="receiving-status receiving-field-full">
+                  No purchase orders are currently available for receiving. Set a purchase order to Ordered first.
+                </div>
+              )}
+
+              {errorMessage && (
                 <div className="receiving-status receiving-status-error receiving-field-full">
-                  Failed to receive stock. Please check the selected product,
-                  location, and quantity.
+                  {errorMessage}
                 </div>
               )}
 
               {receiveMutation.isSuccess && (
                 <div className="receiving-status receiving-status-success receiving-field-full">
-                  Stock received successfully.
+                  Stock received successfully and purchase order quantities updated.
                 </div>
               )}
 
@@ -231,39 +349,45 @@ export function ReceivingPage() {
 
           <aside className="receiving-summary">
             <h2 className="receiving-summary-title">Receipt summary</h2>
-
             <p className="receiving-summary-description">
-              Review the destination before adding stock to inventory.
+              Check the purchase order, outstanding quantity, and destination before receiving stock.
             </p>
-
             <div className="receiving-summary-list">
+              <div className="receiving-summary-item">
+                <span className="receiving-summary-label">Purchase order</span>
+                <span className="receiving-summary-value">
+                  {selectedOrder?.orderNumber ?? "—"}
+                </span>
+              </div>
               <div className="receiving-summary-item">
                 <span className="receiving-summary-label">Product</span>
                 <span className="receiving-summary-value">
-                  {selectedProduct?.sku ?? "—"}
+                  {selectedItem?.sku ?? "—"}
                 </span>
               </div>
-
               <div className="receiving-summary-item">
                 <span className="receiving-summary-label">Warehouse</span>
                 <span className="receiving-summary-value">
                   {selectedWarehouse?.code ?? "—"}
                 </span>
               </div>
-
               <div className="receiving-summary-item">
                 <span className="receiving-summary-label">Location</span>
                 <span className="receiving-summary-value">
                   {selectedLocation?.code ?? "—"}
                 </span>
               </div>
+              <div className="receiving-summary-item">
+                <span className="receiving-summary-label">Outstanding</span>
+                <span className="receiving-summary-value">
+                  {selectedItem ? remainingQuantity : "—"}
+                </span>
+              </div>
             </div>
-
             <div className="receiving-summary-quantity">
               <div className="receiving-summary-quantity-label">
                 Units received
               </div>
-
               <div className="receiving-summary-quantity-value">
                 {Number.isFinite(quantityValue) && quantityValue > 0
                   ? quantityValue

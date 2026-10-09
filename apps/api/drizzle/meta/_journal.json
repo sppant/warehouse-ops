@@ -8,6 +8,13 @@
       "when": 1791484249958,
       "tag": "0000_broad_machine_man",
       "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "7",
+      "when": 1791490049606,
+      "tag": "0001_safe_molecule_man",
+      "breakpoints": true
     }
   ]
 }
