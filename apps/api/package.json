@@ -9,7 +9,8 @@
     "start": "node dist/server.js",
     "db:generate": "drizzle-kit generate",
     "db:migrate": "drizzle-kit migrate",
-    "test": "vitest run"
+    "test": "vitest run",
+    "test:integration": "node scripts/run-integration-tests.mjs"
   },
   "keywords": [],
   "author": "",
