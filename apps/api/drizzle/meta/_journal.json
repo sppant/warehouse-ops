@@ -15,6 +15,13 @@
       "when": 1791490049606,
       "tag": "0001_safe_molecule_man",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1791646412271,
+      "tag": "0002_add_sales_orders",
+      "breakpoints": true
     }
   ]
 }

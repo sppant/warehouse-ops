@@ -28,6 +28,16 @@ export const purchaseOrderStatus = pgEnum("purchase_order_status", [
   "CANCELLED",
 ]);
 
+export const salesOrderStatus = pgEnum("sales_order_status", [
+  "PENDING",
+  "ALLOCATED",
+  "PICKING",
+  "PICKED",
+  "PACKED",
+  "SHIPPED",
+  "CANCELLED",
+]);
+
 export const warehouses = pgTable("warehouses", {
   id: uuid("id").defaultRandom().primaryKey(),
   code: text("code").notNull(),
@@ -130,5 +140,30 @@ export const purchaseOrderItems = pgTable("purchase_order_items", {
     precision: 12,
     scale: 2,
   }).notNull(),
+  createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
+});
+
+export const salesOrders = pgTable("sales_orders", {
+  id: uuid("id").defaultRandom().primaryKey(),
+  orderNumber: text("order_number").notNull(),
+  customer: text("customer").notNull(),
+  status: salesOrderStatus("status").notNull().default("PENDING"),
+  createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
+}, (table) => [
+  uniqueIndex("sales_orders_order_number_unique").on(table.orderNumber),
+]);
+
+export const salesOrderItems = pgTable("sales_order_items", {
+  id: uuid("id").defaultRandom().primaryKey(),
+  salesOrderId: uuid("sales_order_id")
+    .notNull()
+    .references(() => salesOrders.id),
+  productId: uuid("product_id")
+    .notNull()
+    .references(() => products.id),
+  orderedQuantity: integer("ordered_quantity").notNull(),
+  allocatedQuantity: integer("allocated_quantity").notNull().default(0),
+  pickedQuantity: integer("picked_quantity").notNull().default(0),
+  shippedQuantity: integer("shipped_quantity").notNull().default(0),
   createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
 });
