@@ -119,4 +119,87 @@ export const inventoryRepository = {
       return inventoryRow;
     });
   },
+
+  async reserveStock(
+    productId: string,
+    locationId: string,
+    quantity: number,
+  ) {
+    return db.transaction(async (tx) => {
+      const rows = await tx
+        .select({
+          id: inventory.id,
+          onHand: inventory.onHand,
+          reserved: inventory.reserved,
+          damaged: inventory.damaged,
+        })
+        .from(inventory)
+        .where(
+          and(
+            eq(inventory.productId, productId),
+            eq(inventory.locationId, locationId),
+          ),
+        )
+        .for("update");
+
+      const row = rows[0];
+      const available = row
+        ? row.onHand - row.reserved - row.damaged
+        : 0;
+
+      if (available < quantity) {
+        throw new Error("Insufficient available inventory");
+      }
+
+      const updated = await tx
+        .update(inventory)
+        .set({
+          reserved: sql`${inventory.reserved} + ${quantity}`,
+          updatedAt: sql`now()`,
+        })
+        .where(eq(inventory.id, row!.id))
+        .returning();
+
+      return updated[0];
+    });
+  },
+
+  async releaseStock(
+    productId: string,
+    locationId: string,
+    quantity: number,
+  ) {
+    return db.transaction(async (tx) => {
+      const rows = await tx
+        .select({
+          id: inventory.id,
+          reserved: inventory.reserved,
+        })
+        .from(inventory)
+        .where(
+          and(
+            eq(inventory.productId, productId),
+            eq(inventory.locationId, locationId),
+          ),
+        )
+        .for("update");
+
+      const row = rows[0];
+
+      if (!row || row.reserved < quantity) {
+        throw new Error("Cannot release more than reserved quantity");
+      }
+
+      const updated = await tx
+        .update(inventory)
+        .set({
+          reserved: sql`${inventory.reserved} - ${quantity}`,
+          updatedAt: sql`now()`,
+        })
+        .where(eq(inventory.id, row.id))
+        .returning();
+
+      return updated[0];
+    });
+  },
 };

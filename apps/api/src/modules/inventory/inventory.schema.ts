@@ -11,6 +11,18 @@ export const receiveStockSchema = z.object({
   reason: z.string().trim().max(500).optional(),
 });
 
+export const reserveStockSchema = z.object({
+  productId: z.uuid(),
+  locationId: z.uuid(),
+  quantity: z.number().int().positive(),
+});
+
+export const releaseStockSchema = z.object({
+  productId: z.uuid(),
+  locationId: z.uuid(),
+  quantity: z.number().int().positive(),
+});
+
 export const inventoryMovementsQuerySchema = z.object({
   productId: z.uuid().optional(),
   locationId: z.uuid().optional(),
@@ -18,4 +30,6 @@ export const inventoryMovementsQuerySchema = z.object({
 
 export type InventoryQuery = z.infer<typeof inventoryQuerySchema>;
 export type ReceiveStockInput = z.infer<typeof receiveStockSchema>;
+export type ReserveStockInput = z.infer<typeof reserveStockSchema>;
+export type ReleaseStockInput = z.infer<typeof releaseStockSchema>;
 export type InventoryMovementsQuery = z.infer<typeof inventoryMovementsQuerySchema>;
