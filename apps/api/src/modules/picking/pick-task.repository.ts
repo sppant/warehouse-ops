@@ -1,4 +1,4 @@
-import { asc, desc, eq } from "drizzle-orm";
+import { and, asc, desc, eq, sql } from "drizzle-orm";
 import { db } from "../../db/index.js";
 import {
   inventory,
@@ -8,6 +8,7 @@ import {
   products,
   salesOrderItems,
   salesOrders,
+  stockMovements,
 } from "../../db/schema.js";
 
 export const pickTaskRepository = {
@@ -155,6 +156,178 @@ export const pickTaskRepository = {
         .where(eq(salesOrders.id, salesOrderId));
 
       return task;
+    });
+  },
+
+  async pick(pickTaskItemId: string, quantity: number, reason?: string) {
+    return db.transaction(async (tx) => {
+      const itemResult = await tx
+        .select({
+          id: pickTaskItems.id,
+          pickTaskId: pickTaskItems.pickTaskId,
+          salesOrderItemId: pickTaskItems.salesOrderItemId,
+          productId: pickTaskItems.productId,
+          locationId: pickTaskItems.locationId,
+          quantity: pickTaskItems.quantity,
+          pickedQuantity: pickTaskItems.pickedQuantity,
+          taskStatus: pickTasks.status,
+          salesOrderId: pickTasks.salesOrderId,
+        })
+        .from(pickTaskItems)
+        .innerJoin(pickTasks, eq(pickTaskItems.pickTaskId, pickTasks.id))
+        .where(eq(pickTaskItems.id, pickTaskItemId))
+        .for("update");
+
+      const item = itemResult[0];
+
+      if (!item) {
+        throw new Error("Pick task item not found");
+      }
+
+      if (item.taskStatus === "CANCELLED" || item.taskStatus === "COMPLETED") {
+        throw new Error(
+          "Cannot pick for a cancelled or completed pick task",
+        );
+      }
+
+      if (item.pickedQuantity + quantity > item.quantity) {
+        throw new Error(
+          "Picked quantity cannot exceed the pick task item quantity",
+        );
+      }
+
+      const salesOrderItemResult = await tx
+        .select({
+          id: salesOrderItems.id,
+          allocatedQuantity: salesOrderItems.allocatedQuantity,
+          pickedQuantity: salesOrderItems.pickedQuantity,
+        })
+        .from(salesOrderItems)
+        .where(eq(salesOrderItems.id, item.salesOrderItemId))
+        .for("update");
+
+      const salesOrderItem = salesOrderItemResult[0];
+
+      if (!salesOrderItem) {
+        throw new Error("Sales order item not found");
+      }
+
+      if (
+        salesOrderItem.pickedQuantity + quantity >
+        salesOrderItem.allocatedQuantity
+      ) {
+        throw new Error(
+          "Picked quantity cannot exceed the allocated quantity",
+        );
+      }
+
+      const inventoryResult = await tx
+        .select({
+          id: inventory.id,
+          onHand: inventory.onHand,
+          reserved: inventory.reserved,
+        })
+        .from(inventory)
+        .where(
+          and(
+            eq(inventory.productId, item.productId),
+            eq(inventory.locationId, item.locationId),
+          ),
+        )
+        .for("update");
+
+      const inventoryRow = inventoryResult[0];
+
+      if (
+        !inventoryRow ||
+        inventoryRow.onHand < quantity ||
+        inventoryRow.reserved < quantity
+      ) {
+        throw new Error("Insufficient reserved inventory at location");
+      }
+
+      await tx
+        .update(inventory)
+        .set({
+          onHand: sql`${inventory.onHand} - ${quantity}`,
+          reserved: sql`${inventory.reserved} - ${quantity}`,
+          updatedAt: sql`now()`,
+        })
+        .where(eq(inventory.id, inventoryRow.id));
+
+      await tx.insert(stockMovements).values({
+        productId: item.productId,
+        locationId: item.locationId,
+        type: "PICK",
+        quantity,
+        referenceType: "PICK_TASK_ITEM",
+        referenceId: pickTaskItemId,
+        reason: reason ?? null,
+      });
+
+      await tx
+        .update(pickTaskItems)
+        .set({
+          pickedQuantity: sql`${pickTaskItems.pickedQuantity} + ${quantity}`,
+        })
+        .where(eq(pickTaskItems.id, pickTaskItemId));
+
+      await tx
+        .update(salesOrderItems)
+        .set({
+          pickedQuantity: sql`${salesOrderItems.pickedQuantity} + ${quantity}`,
+        })
+        .where(eq(salesOrderItems.id, item.salesOrderItemId));
+
+      const taskItems = await tx
+        .select({
+          quantity: pickTaskItems.quantity,
+          pickedQuantity: pickTaskItems.pickedQuantity,
+        })
+        .from(pickTaskItems)
+        .where(eq(pickTaskItems.pickTaskId, item.pickTaskId));
+
+      const taskComplete = taskItems.every(
+        (entry) => entry.pickedQuantity >= entry.quantity,
+      );
+
+      const newTaskStatus = taskComplete ? "COMPLETED" : "IN_PROGRESS";
+
+      await tx
+        .update(pickTasks)
+        .set({
+          status: newTaskStatus,
+          ...(taskComplete ? { completedAt: sql`now()` } : {}),
+        })
+        .where(eq(pickTasks.id, item.pickTaskId));
+
+      const orderItems = await tx
+        .select({
+          allocatedQuantity: salesOrderItems.allocatedQuantity,
+          pickedQuantity: salesOrderItems.pickedQuantity,
+        })
+        .from(salesOrderItems)
+        .where(eq(salesOrderItems.salesOrderId, item.salesOrderId));
+
+      const orderFullyPicked = orderItems.every(
+        (entry) => entry.pickedQuantity >= entry.allocatedQuantity,
+      );
+
+      if (orderFullyPicked) {
+        await tx
+          .update(salesOrders)
+          .set({ status: "PICKED" })
+          .where(eq(salesOrders.id, item.salesOrderId));
+      }
+
+      return {
+        pickTaskId: item.pickTaskId,
+        pickTaskItemId,
+        productId: item.productId,
+        locationId: item.locationId,
+        quantity,
+        taskStatus: newTaskStatus,
+      };
     });
   },
 };

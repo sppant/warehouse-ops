@@ -1,11 +1,15 @@
 import type { FastifyInstance } from "fastify";
 import {
   generatePickTaskSchema,
+  pickItemSchema,
   pickTaskIdSchema,
+  pickTaskItemIdSchema,
 } from "./pick-task.schema.js";
 import {
   InsufficientInventoryError,
+  InvalidPickError,
   InvalidSalesOrderStateError,
+  PickTaskItemNotFoundError,
   PickTaskNotFoundError,
   SalesOrderNotFoundError,
   pickTaskService,
@@ -76,4 +80,49 @@ export async function pickTaskRoutes(app: FastifyInstance) {
       throw error;
     }
   });
+
+  app.post(
+    "/api/pick-tasks/items/:itemId/pick",
+    async (request, reply) => {
+      const params = pickTaskItemIdSchema.safeParse(request.params);
+      const body = pickItemSchema.safeParse(request.body);
+
+      if (!params.success) {
+        return reply.status(400).send({
+          error: "Invalid pick task item ID",
+          details: params.error.flatten(),
+        });
+      }
+
+      if (!body.success) {
+        return reply.status(400).send({
+          error: "Invalid pick data",
+          details: body.error.flatten(),
+        });
+      }
+
+      try {
+        const data = await pickTaskService.pick({
+          ...body.data,
+          pickTaskItemId: params.data.itemId,
+        });
+
+        return reply.status(201).send({ data });
+      } catch (error) {
+        if (error instanceof PickTaskItemNotFoundError) {
+          return reply.status(404).send({
+            error: error.message,
+          });
+        }
+
+        if (error instanceof InvalidPickError) {
+          return reply.status(400).send({
+            error: error.message,
+          });
+        }
+
+        throw error;
+      }
+    },
+  );
 }

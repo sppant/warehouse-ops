@@ -1,3 +1,4 @@
+import type { PickItemInput } from "./pick-task.schema.js";
 import { pickTaskRepository } from "./pick-task.repository.js";
 
 export class PickTaskNotFoundError extends Error {
@@ -25,6 +26,20 @@ export class InsufficientInventoryError extends Error {
   constructor(message: string) {
     super(message);
     this.name = "InsufficientInventoryError";
+  }
+}
+
+export class PickTaskItemNotFoundError extends Error {
+  constructor() {
+    super("Pick task item not found");
+    this.name = "PickTaskItemNotFoundError";
+  }
+}
+
+export class InvalidPickError extends Error {
+  constructor(message: string) {
+    super(message);
+    this.name = "InvalidPickError";
   }
 }
 
@@ -65,6 +80,39 @@ export const pickTaskService = {
         error.message === "Insufficient inventory to generate pick task"
       ) {
         throw new InsufficientInventoryError(error.message);
+      }
+
+      throw error;
+    }
+  },
+
+  async pick(input: PickItemInput) {
+    try {
+      return await pickTaskRepository.pick(
+        input.pickTaskItemId,
+        input.quantity,
+        input.reason,
+      );
+    } catch (error) {
+      if (
+        error instanceof Error &&
+        error.message === "Pick task item not found"
+      ) {
+        throw new PickTaskItemNotFoundError();
+      }
+
+      if (
+        error instanceof Error &&
+        (error.message ===
+          "Cannot pick for a cancelled or completed pick task" ||
+          error.message ===
+            "Picked quantity cannot exceed the pick task item quantity" ||
+          error.message ===
+            "Picked quantity cannot exceed the allocated quantity" ||
+          error.message === "Insufficient reserved inventory at location" ||
+          error.message === "Sales order item not found")
+      ) {
+        throw new InvalidPickError(error.message);
       }
 
       throw error;
