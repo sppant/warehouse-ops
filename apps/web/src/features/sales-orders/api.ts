@@ -82,3 +82,27 @@ export async function allocateSalesOrder(id: string) {
 
   return response.data;
 }
+
+export async function packSalesOrder(id: string) {
+  const response = await apiFetch<{ data: SalesOrder }>(
+    `/api/sales-orders/${id}/pack`,
+    {
+      method: "POST",
+      body: JSON.stringify({}),
+    },
+  );
+
+  return response.data;
+}
+
+export async function shipSalesOrder(id: string) {
+  const response = await apiFetch<{ data: SalesOrder }>(
+    `/api/sales-orders/${id}/ship`,
+    {
+      method: "POST",
+      body: JSON.stringify({}),
+    },
+  );
+
+  return response.data;
+}

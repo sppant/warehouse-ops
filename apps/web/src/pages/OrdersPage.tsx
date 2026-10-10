@@ -5,10 +5,14 @@ import {
   createSalesOrder,
   getSalesOrder,
   getSalesOrders,
+  packSalesOrder,
+  shipSalesOrder,
   type SalesOrder,
   type SalesOrderDetail,
   type SalesOrderStatus,
 } from "../features/sales-orders/api";
+
+type TransitionAction = "allocate" | "pack" | "ship";
 
 type Product = {
   id: string;
@@ -52,7 +56,9 @@ export function OrdersPage() {
   const [showCreate, setShowCreate] = useState(false);
   const [loading, setLoading] = useState(true);
   const [detailsLoading, setDetailsLoading] = useState(false);
-  const [allocating, setAllocating] = useState(false);
+  const [actionLoading, setActionLoading] = useState<TransitionAction | null>(
+    null,
+  );
   const [error, setError] = useState("");
 
   const [orderNumber, setOrderNumber] = useState("");
@@ -165,16 +171,20 @@ export function OrdersPage() {
     }
   }
 
-  async function handleAllocate() {
+  async function handleTransition(
+    action: TransitionAction,
+    run: (id: string) => Promise<SalesOrder>,
+    failureMessage: string,
+  ) {
     if (!selectedOrder) {
       return;
     }
 
-    setAllocating(true);
+    setActionLoading(action);
     setError("");
 
     try {
-      await allocateSalesOrder(selectedOrder.id);
+      await run(selectedOrder.id);
       const refreshed = await getSalesOrder(selectedOrder.id);
 
       setSelectedOrder(refreshed);
@@ -184,9 +194,9 @@ export function OrdersPage() {
         ),
       );
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Failed to allocate order");
+      setError(err instanceof Error ? err.message : failureMessage);
     } finally {
-      setAllocating(false);
+      setActionLoading(null);
     }
   }
 
@@ -196,7 +206,7 @@ export function OrdersPage() {
         <div>
           <div className="eyebrow">FULFILLMENT</div>
           <h1>Orders</h1>
-          <p>Track customer orders from placement through allocation.</p>
+          <p>Track customer orders from placement through shipping.</p>
         </div>
 
         <button
@@ -330,10 +340,58 @@ export function OrdersPage() {
                   <button
                     className="ui-button ui-button-secondary"
                     type="button"
-                    disabled={allocating}
-                    onClick={() => void handleAllocate()}
+                    disabled={actionLoading !== null}
+                    onClick={() =>
+                      void handleTransition(
+                        "allocate",
+                        allocateSalesOrder,
+                        "Failed to allocate order",
+                      )
+                    }
                   >
-                    {allocating ? "Allocating..." : "Allocate stock"}
+                    {actionLoading === "allocate"
+                      ? "Allocating..."
+                      : "Allocate stock"}
+                  </button>
+                </div>
+              )}
+
+              {selectedOrder.status === "PICKED" && (
+                <div>
+                  <span>Packing</span>
+                  <button
+                    className="ui-button ui-button-secondary"
+                    type="button"
+                    disabled={actionLoading !== null}
+                    onClick={() =>
+                      void handleTransition(
+                        "pack",
+                        packSalesOrder,
+                        "Failed to pack order",
+                      )
+                    }
+                  >
+                    {actionLoading === "pack" ? "Packing..." : "Mark as packed"}
+                  </button>
+                </div>
+              )}
+
+              {selectedOrder.status === "PACKED" && (
+                <div>
+                  <span>Shipping</span>
+                  <button
+                    className="ui-button ui-button-secondary"
+                    type="button"
+                    disabled={actionLoading !== null}
+                    onClick={() =>
+                      void handleTransition(
+                        "ship",
+                        shipSalesOrder,
+                        "Failed to ship order",
+                      )
+                    }
+                  >
+                    {actionLoading === "ship" ? "Shipping..." : "Mark as shipped"}
                   </button>
                 </div>
               )}
