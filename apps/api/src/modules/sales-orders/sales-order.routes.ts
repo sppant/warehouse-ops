@@ -4,6 +4,8 @@ import {
   salesOrderIdSchema,
 } from "./sales-order.schema.js";
 import {
+  InsufficientInventoryError,
+  InvalidSalesOrderStateError,
   ProductNotFoundError,
   SalesOrderAlreadyExistsError,
   SalesOrderNotFoundError,
@@ -65,6 +67,40 @@ export async function salesOrderRoutes(app: FastifyInstance) {
 
       if (error instanceof SalesOrderAlreadyExistsError) {
         return reply.status(409).send({
+          error: error.message,
+        });
+      }
+
+      throw error;
+    }
+  });
+
+  app.post("/api/sales-orders/:id/allocate", async (request, reply) => {
+    const params = salesOrderIdSchema.safeParse(request.params);
+
+    if (!params.success) {
+      return reply.status(400).send({
+        error: "Invalid sales order ID",
+        details: params.error.flatten(),
+      });
+    }
+
+    try {
+      const data = await salesOrderService.allocate(params.data.id);
+
+      return { data };
+    } catch (error) {
+      if (error instanceof SalesOrderNotFoundError) {
+        return reply.status(404).send({
+          error: error.message,
+        });
+      }
+
+      if (
+        error instanceof InvalidSalesOrderStateError ||
+        error instanceof InsufficientInventoryError
+      ) {
+        return reply.status(400).send({
           error: error.message,
         });
       }

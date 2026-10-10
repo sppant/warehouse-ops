@@ -25,6 +25,20 @@ export class SalesOrderAlreadyExistsError extends Error {
   }
 }
 
+export class InvalidSalesOrderStateError extends Error {
+  constructor(message: string) {
+    super(message);
+    this.name = "InvalidSalesOrderStateError";
+  }
+}
+
+export class InsufficientInventoryError extends Error {
+  constructor() {
+    super("Insufficient available inventory");
+    this.name = "InsufficientInventoryError";
+  }
+}
+
 const getErrorCode = (error: unknown): string | undefined => {
   if (typeof error !== "object" || error === null) {
     return undefined;
@@ -85,6 +99,32 @@ export const salesOrderService = {
     } catch (error) {
       if (isUniqueViolation(error)) {
         throw new SalesOrderAlreadyExistsError();
+      }
+
+      throw error;
+    }
+  },
+
+  async allocate(id: string) {
+    try {
+      return await salesOrderRepository.allocate(id);
+    } catch (error) {
+      if (error instanceof Error && error.message === "Sales order not found") {
+        throw new SalesOrderNotFoundError();
+      }
+
+      if (
+        error instanceof Error &&
+        error.message === "Only pending sales orders can be allocated"
+      ) {
+        throw new InvalidSalesOrderStateError(error.message);
+      }
+
+      if (
+        error instanceof Error &&
+        error.message === "Insufficient available inventory"
+      ) {
+        throw new InsufficientInventoryError();
       }
 
       throw error;
