@@ -35,3 +35,35 @@ export function getInventory(search?: string) {
     `/api/inventory${query ? `?${query}` : ""}`,
   );
 }
+
+export type StockMovementType =
+  | "RECEIPT"
+  | "PICK"
+  | "DAMAGE"
+  | "RETURN"
+  | "ADJUSTMENT"
+  | "TRANSFER_IN"
+  | "TRANSFER_OUT";
+
+export type StockMovement = {
+  id: string;
+  productId: string;
+  sku: string;
+  productName: string;
+  locationId: string;
+  locationCode: string;
+  type: StockMovementType;
+  quantity: number;
+  referenceType: string | null;
+  referenceId: string | null;
+  reason: string | null;
+  createdAt: string;
+};
+
+export async function getInventoryMovements() {
+  const response = await apiFetch<{ data: StockMovement[] }>(
+    "/api/inventory/movements",
+  );
+
+  return response.data;
+}
