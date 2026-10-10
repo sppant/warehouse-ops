@@ -5,8 +5,10 @@ const navigation = [
   { label: "Dashboard", path: "/" },
   { label: "Inventory", path: "/inventory" },
   { label: "Products", path: "/products" },
-  { label: "Orders", path: "/orders" },
+  { label: "Purchase Orders", path: "/purchase-orders" },
   { label: "Receiving", path: "/receiving" },
+  { label: "Orders", path: "/orders" },
+  { label: "Picking", path: "/picking" },
   { label: "Locations", path: "/locations" },
   { label: "Cycle Counts", path: "/cycle-counts" },
 ];

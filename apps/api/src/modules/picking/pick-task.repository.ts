@@ -13,13 +13,34 @@ import {
 
 export const pickTaskRepository = {
   async findAll() {
-    return db.select().from(pickTasks).orderBy(desc(pickTasks.createdAt));
+    return db
+      .select({
+        id: pickTasks.id,
+        salesOrderId: pickTasks.salesOrderId,
+        orderNumber: salesOrders.orderNumber,
+        customer: salesOrders.customer,
+        status: pickTasks.status,
+        createdAt: pickTasks.createdAt,
+        completedAt: pickTasks.completedAt,
+      })
+      .from(pickTasks)
+      .innerJoin(salesOrders, eq(pickTasks.salesOrderId, salesOrders.id))
+      .orderBy(desc(pickTasks.createdAt));
   },
 
   async findById(id: string) {
     const task = await db
-      .select()
+      .select({
+        id: pickTasks.id,
+        salesOrderId: pickTasks.salesOrderId,
+        orderNumber: salesOrders.orderNumber,
+        customer: salesOrders.customer,
+        status: pickTasks.status,
+        createdAt: pickTasks.createdAt,
+        completedAt: pickTasks.completedAt,
+      })
       .from(pickTasks)
+      .innerJoin(salesOrders, eq(pickTasks.salesOrderId, salesOrders.id))
       .where(eq(pickTasks.id, id))
       .limit(1);
 

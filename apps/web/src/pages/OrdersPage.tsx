@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { apiFetch } from "../lib/api";
+import { Link } from "react-router-dom";
 import {
   allocateSalesOrder,
   createSalesOrder,
@@ -11,8 +12,9 @@ import {
   type SalesOrderDetail,
   type SalesOrderStatus,
 } from "../features/sales-orders/api";
+import { generatePickTask } from "../features/picking/api";
 
-type TransitionAction = "allocate" | "pack" | "ship";
+type TransitionAction = "allocate" | "generatePickTask" | "pack" | "ship";
 
 type Product = {
   id: string;
@@ -173,7 +175,7 @@ export function OrdersPage() {
 
   async function handleTransition(
     action: TransitionAction,
-    run: (id: string) => Promise<SalesOrder>,
+    run: (id: string) => Promise<unknown>,
     failureMessage: string,
   ) {
     if (!selectedOrder) {
@@ -353,6 +355,37 @@ export function OrdersPage() {
                       ? "Allocating..."
                       : "Allocate stock"}
                   </button>
+                </div>
+              )}
+
+              {selectedOrder.status === "ALLOCATED" && (
+                <div>
+                  <span>Picking</span>
+                  <button
+                    className="ui-button ui-button-secondary"
+                    type="button"
+                    disabled={actionLoading !== null}
+                    onClick={() =>
+                      void handleTransition(
+                        "generatePickTask",
+                        (id) => generatePickTask(id),
+                        "Failed to generate pick task",
+                      )
+                    }
+                  >
+                    {actionLoading === "generatePickTask"
+                      ? "Generating..."
+                      : "Generate pick task"}
+                  </button>
+                </div>
+              )}
+
+              {selectedOrder.status === "PICKING" && (
+                <div>
+                  <span>Picking</span>
+                  <Link className="ui-button ui-button-secondary" to="/picking">
+                    Go to Picking
+                  </Link>
                 </div>
               )}
 
