@@ -38,6 +38,13 @@ export const salesOrderStatus = pgEnum("sales_order_status", [
   "CANCELLED",
 ]);
 
+export const pickTaskStatus = pgEnum("pick_task_status", [
+  "PENDING",
+  "IN_PROGRESS",
+  "COMPLETED",
+  "CANCELLED",
+]);
+
 export const warehouses = pgTable("warehouses", {
   id: uuid("id").defaultRandom().primaryKey(),
   code: text("code").notNull(),
@@ -165,5 +172,34 @@ export const salesOrderItems = pgTable("sales_order_items", {
   allocatedQuantity: integer("allocated_quantity").notNull().default(0),
   pickedQuantity: integer("picked_quantity").notNull().default(0),
   shippedQuantity: integer("shipped_quantity").notNull().default(0),
+  createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
+});
+
+export const pickTasks = pgTable("pick_tasks", {
+  id: uuid("id").defaultRandom().primaryKey(),
+  salesOrderId: uuid("sales_order_id")
+    .notNull()
+    .references(() => salesOrders.id),
+  status: pickTaskStatus("status").notNull().default("PENDING"),
+  createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
+  completedAt: timestamp("completed_at", { withTimezone: true }),
+});
+
+export const pickTaskItems = pgTable("pick_task_items", {
+  id: uuid("id").defaultRandom().primaryKey(),
+  pickTaskId: uuid("pick_task_id")
+    .notNull()
+    .references(() => pickTasks.id),
+  salesOrderItemId: uuid("sales_order_item_id")
+    .notNull()
+    .references(() => salesOrderItems.id),
+  productId: uuid("product_id")
+    .notNull()
+    .references(() => products.id),
+  locationId: uuid("location_id")
+    .notNull()
+    .references(() => locations.id),
+  quantity: integer("quantity").notNull(),
+  pickedQuantity: integer("picked_quantity").notNull().default(0),
   createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
 });
