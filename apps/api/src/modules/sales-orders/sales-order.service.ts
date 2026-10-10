@@ -57,6 +57,21 @@ const getErrorCode = (error: unknown): string | undefined => {
 
 const isUniqueViolation = (error: unknown) => getErrorCode(error) === "23505";
 
+const mapTransitionError = (
+  error: unknown,
+  invalidStateMessages: string[],
+): never => {
+  if (error instanceof Error && error.message === "Sales order not found") {
+    throw new SalesOrderNotFoundError();
+  }
+
+  if (error instanceof Error && invalidStateMessages.includes(error.message)) {
+    throw new InvalidSalesOrderStateError(error.message);
+  }
+
+  throw error;
+};
+
 export const salesOrderService = {
   async list() {
     return salesOrderRepository.findAll();
@@ -109,17 +124,6 @@ export const salesOrderService = {
     try {
       return await salesOrderRepository.allocate(id);
     } catch (error) {
-      if (error instanceof Error && error.message === "Sales order not found") {
-        throw new SalesOrderNotFoundError();
-      }
-
-      if (
-        error instanceof Error &&
-        error.message === "Only pending sales orders can be allocated"
-      ) {
-        throw new InvalidSalesOrderStateError(error.message);
-      }
-
       if (
         error instanceof Error &&
         error.message === "Insufficient available inventory"
@@ -127,7 +131,27 @@ export const salesOrderService = {
         throw new InsufficientInventoryError();
       }
 
-      throw error;
+      mapTransitionError(error, [
+        "Only pending sales orders can be allocated",
+      ]);
+    }
+  },
+
+  async pack(id: string) {
+    try {
+      return await salesOrderRepository.pack(id);
+    } catch (error) {
+      mapTransitionError(error, [
+        "Only fully picked sales orders can be packed",
+      ]);
+    }
+  },
+
+  async ship(id: string) {
+    try {
+      return await salesOrderRepository.ship(id);
+    } catch (error) {
+      mapTransitionError(error, ["Only packed sales orders can be shipped"]);
     }
   },
 };

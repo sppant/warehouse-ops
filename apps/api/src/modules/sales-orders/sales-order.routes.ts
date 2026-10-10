@@ -75,7 +75,31 @@ export async function salesOrderRoutes(app: FastifyInstance) {
     }
   });
 
-  app.post("/api/sales-orders/:id/allocate", async (request, reply) => {
+  registerStatusTransitionRoute(
+    app,
+    "/api/sales-orders/:id/allocate",
+    salesOrderService.allocate,
+  );
+
+  registerStatusTransitionRoute(
+    app,
+    "/api/sales-orders/:id/pack",
+    salesOrderService.pack,
+  );
+
+  registerStatusTransitionRoute(
+    app,
+    "/api/sales-orders/:id/ship",
+    salesOrderService.ship,
+  );
+}
+
+function registerStatusTransitionRoute(
+  app: FastifyInstance,
+  path: string,
+  transition: (id: string) => Promise<unknown>,
+) {
+  app.post(path, async (request, reply) => {
     const params = salesOrderIdSchema.safeParse(request.params);
 
     if (!params.success) {
@@ -86,7 +110,7 @@ export async function salesOrderRoutes(app: FastifyInstance) {
     }
 
     try {
-      const data = await salesOrderService.allocate(params.data.id);
+      const data = await transition(params.data.id);
 
       return { data };
     } catch (error) {

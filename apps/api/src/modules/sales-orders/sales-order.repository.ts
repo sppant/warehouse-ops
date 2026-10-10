@@ -172,4 +172,67 @@ export const salesOrderRepository = {
       return updatedOrderResult[0];
     });
   },
+
+  async pack(id: string) {
+    return db.transaction(async (tx) => {
+      const orderResult = await tx
+        .select()
+        .from(salesOrders)
+        .where(eq(salesOrders.id, id))
+        .for("update");
+
+      const order = orderResult[0];
+
+      if (!order) {
+        throw new Error("Sales order not found");
+      }
+
+      if (order.status !== "PICKED") {
+        throw new Error("Only fully picked sales orders can be packed");
+      }
+
+      const updatedOrderResult = await tx
+        .update(salesOrders)
+        .set({ status: "PACKED" })
+        .where(eq(salesOrders.id, id))
+        .returning();
+
+      return updatedOrderResult[0];
+    });
+  },
+
+  async ship(id: string) {
+    return db.transaction(async (tx) => {
+      const orderResult = await tx
+        .select()
+        .from(salesOrders)
+        .where(eq(salesOrders.id, id))
+        .for("update");
+
+      const order = orderResult[0];
+
+      if (!order) {
+        throw new Error("Sales order not found");
+      }
+
+      if (order.status !== "PACKED") {
+        throw new Error("Only packed sales orders can be shipped");
+      }
+
+      await tx
+        .update(salesOrderItems)
+        .set({
+          shippedQuantity: sql`${salesOrderItems.pickedQuantity}`,
+        })
+        .where(eq(salesOrderItems.salesOrderId, id));
+
+      const updatedOrderResult = await tx
+        .update(salesOrders)
+        .set({ status: "SHIPPED" })
+        .where(eq(salesOrders.id, id))
+        .returning();
+
+      return updatedOrderResult[0];
+    });
+  },
 };
