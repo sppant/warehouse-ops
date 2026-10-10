@@ -45,6 +45,12 @@ export const pickTaskStatus = pgEnum("pick_task_status", [
   "CANCELLED",
 ]);
 
+export const cycleCountStatus = pgEnum("cycle_count_status", [
+  "PENDING",
+  "APPROVED",
+  "REJECTED",
+]);
+
 export const warehouses = pgTable("warehouses", {
   id: uuid("id").defaultRandom().primaryKey(),
   code: text("code").notNull(),
@@ -202,4 +208,21 @@ export const pickTaskItems = pgTable("pick_task_items", {
   quantity: integer("quantity").notNull(),
   pickedQuantity: integer("picked_quantity").notNull().default(0),
   createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
+});
+
+export const cycleCounts = pgTable("cycle_counts", {
+  id: uuid("id").defaultRandom().primaryKey(),
+  productId: uuid("product_id")
+    .notNull()
+    .references(() => products.id),
+  locationId: uuid("location_id")
+    .notNull()
+    .references(() => locations.id),
+  expectedQuantity: integer("expected_quantity").notNull(),
+  countedQuantity: integer("counted_quantity").notNull(),
+  difference: integer("difference").notNull(),
+  reason: text("reason"),
+  status: cycleCountStatus("status").notNull().default("PENDING"),
+  createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
+  reviewedAt: timestamp("reviewed_at", { withTimezone: true }),
 });
