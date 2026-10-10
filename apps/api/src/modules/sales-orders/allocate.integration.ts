@@ -17,6 +17,7 @@ describe("salesOrderRepository.allocate integration", () => {
   let locationAId: string;
   let locationBId: string;
   let productId: string;
+  const createdOrderIds: string[] = [];
 
   beforeAll(async () => {
     const [warehouse] = await db.insert(warehouses).values({
@@ -48,8 +49,11 @@ describe("salesOrderRepository.allocate integration", () => {
   });
 
   afterAll(async () => {
+    for (const orderId of createdOrderIds) {
+      await db.delete(salesOrderItems).where(eq(salesOrderItems.salesOrderId, orderId));
+      await db.delete(salesOrders).where(eq(salesOrders.id, orderId));
+    }
     if (productId) {
-      await db.delete(salesOrderItems).where(eq(salesOrderItems.productId, productId));
       await db.delete(inventory).where(eq(inventory.productId, productId));
       await db.delete(products).where(eq(products.id, productId));
     }
@@ -72,6 +76,7 @@ describe("salesOrderRepository.allocate integration", () => {
       orderNumber,
       customer: "Integration Test Customer",
     }).returning({ id: salesOrders.id });
+    createdOrderIds.push(order!.id);
 
     const [item] = await db.insert(salesOrderItems).values({
       salesOrderId: order!.id,
