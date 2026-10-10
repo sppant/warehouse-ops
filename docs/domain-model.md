@@ -242,20 +242,23 @@ The inventory update and stock movement creation must happen atomically.
 
 ## Architecture
 
-The initial application will be a modular monolith.
+The application is a modular monolith.
 
 apps/api/src/modules/
 
 - products
 - warehouses
 - inventory
-- purchasing
-- receiving
-- orders
+- purchase-orders (purchasing and receiving — receiving is a transaction on a purchase order's items, not a separate domain concept)
+- sales-orders (orders, plus the packing and shipping status transitions)
 - picking
-- shipping
 - cycle-counts
 
-We will avoid microservices.
+We avoid microservices.
 
 The goal is a well-structured application, not unnecessary infrastructure.
+
+Two deliberate deviations from a one-module-per-noun split, both because the "extra" concept is a transaction against an existing aggregate rather than an independent entity with its own lifecycle:
+
+- Receiving has no module of its own. It lives in `purchase-orders` because receiving an item only makes sense in the context of a purchase order and directly updates that order's item quantities and status.
+- Shipping has no module of its own. It lives in `sales-orders` as the `PACKED -> SHIPPED` transition, since shipping is a terminal status change on the sales order rather than an entity with its own table.
