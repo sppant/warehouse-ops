@@ -6,7 +6,7 @@ on:
   pull_request:
 
 jobs:
-  lint-and-build:
+  lint-test-and-build:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -20,6 +20,9 @@ jobs:
 
       - name: Lint
         run: npm run lint -w apps/web
+
+      - name: Unit tests
+        run: npm test -w apps/web
 
       - name: Build
         run: npm run build -w apps/web
