@@ -23,3 +23,5 @@ jobs:
 
       - name: Unit tests
         run: npm test -w apps/api
+        env:
+          DATABASE_URL: postgresql://user:pass@localhost:5432/unused
