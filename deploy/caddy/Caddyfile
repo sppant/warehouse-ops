@@ -1,0 +1,4 @@
+warehouse-ops.webxdevelop.com {
+	encode zstd gzip
+	reverse_proxy web:80
+}

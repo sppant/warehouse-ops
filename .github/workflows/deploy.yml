@@ -101,7 +101,7 @@ jobs:
       - name: Copy compose file
         run: |
           ssh -i ~/.ssh/id_deploy "${{ secrets.EC2_USER }}@${{ secrets.EC2_HOST }}" "mkdir -p ${{ vars.DEPLOY_DIR || '~/warehouse-ops' }}"
-          scp -i ~/.ssh/id_deploy compose.yaml "${{ secrets.EC2_USER }}@${{ secrets.EC2_HOST }}:${{ vars.DEPLOY_DIR || '~/warehouse-ops' }}/compose.yaml"
+          scp -i ~/.ssh/id_deploy compose.yaml deploy/caddy/Caddyfile "${{ secrets.EC2_USER }}@${{ secrets.EC2_HOST }}:${{ vars.DEPLOY_DIR || '~/warehouse-ops' }}/"
 
       - name: Deploy
         env:
@@ -122,8 +122,8 @@ jobs:
 
       - name: Health check
         run: |
-          for i in $(seq 1 12); do
-            curl -fsS "http://${{ secrets.EC2_HOST }}/health" && exit 0
+          for i in $(seq 1 24); do
+            curl -fsSL "https://${{ secrets.EC2_HOST }}/health" && exit 0
             sleep 5
           done
           echo "Health check failed" >&2
