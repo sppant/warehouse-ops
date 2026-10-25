@@ -10,3 +10,6 @@ coverage/
 
 .DS_Store
 *.log
+
+# Built Docker image bundles for deploy
+deploy/*.tar.gz
