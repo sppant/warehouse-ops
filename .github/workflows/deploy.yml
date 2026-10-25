@@ -1,0 +1,130 @@
+name: Deploy
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+concurrency:
+  group: deploy
+  cancel-in-progress: false
+
+jobs:
+  api:
+    uses: ./.github/workflows/api.yml
+
+  web:
+    uses: ./.github/workflows/web.yml
+
+  publish:
+    needs: [api, web]
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
+    outputs:
+      prefix: ${{ steps.vars.outputs.prefix }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - id: vars
+        run: echo "prefix=ghcr.io/${GITHUB_REPOSITORY_OWNER,,}/warehouse-ops" >> "$GITHUB_OUTPUT"
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - run: npm ci
+
+      # The web Dockerfile copies the prebuilt apps/web/dist
+      - name: Build web assets
+        run: npm run build -w apps/web
+
+      - uses: docker/setup-buildx-action@v3
+
+      - uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Build and push api
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: apps/api/Dockerfile
+          target: runtime
+          push: true
+          tags: |
+            ${{ steps.vars.outputs.prefix }}-api:${{ github.sha }}
+            ${{ steps.vars.outputs.prefix }}-api:latest
+          cache-from: type=gha,scope=api
+          cache-to: type=gha,mode=max,scope=api
+
+      - name: Build and push migrate
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: apps/api/Dockerfile
+          target: migrate
+          push: true
+          tags: |
+            ${{ steps.vars.outputs.prefix }}-migrate:${{ github.sha }}
+            ${{ steps.vars.outputs.prefix }}-migrate:latest
+          cache-from: type=gha,scope=api
+
+      - name: Build and push web
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: apps/web/Dockerfile
+          push: true
+          tags: |
+            ${{ steps.vars.outputs.prefix }}-web:${{ github.sha }}
+            ${{ steps.vars.outputs.prefix }}-web:latest
+
+  deploy:
+    needs: publish
+    runs-on: ubuntu-latest
+    environment: production
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up SSH
+        run: |
+          install -m 700 -d ~/.ssh
+          echo "${{ secrets.EC2_SSH_KEY }}" > ~/.ssh/id_deploy
+          chmod 600 ~/.ssh/id_deploy
+          ssh-keyscan -H "${{ secrets.EC2_HOST }}" >> ~/.ssh/known_hosts
+
+      - name: Copy compose file
+        run: |
+          ssh -i ~/.ssh/id_deploy "${{ secrets.EC2_USER }}@${{ secrets.EC2_HOST }}" "mkdir -p ${{ vars.DEPLOY_DIR || '~/warehouse-ops' }}"
+          scp -i ~/.ssh/id_deploy compose.yaml "${{ secrets.EC2_USER }}@${{ secrets.EC2_HOST }}:${{ vars.DEPLOY_DIR || '~/warehouse-ops' }}/compose.yaml"
+
+      - name: Deploy
+        env:
+          PREFIX: ${{ needs.publish.outputs.prefix }}
+          TAG: ${{ github.sha }}
+          GHCR_USER: ${{ github.actor }}
+          GHCR_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          ssh -i ~/.ssh/id_deploy "${{ secrets.EC2_USER }}@${{ secrets.EC2_HOST }}" \
+            "cd ${{ vars.DEPLOY_DIR || '~/warehouse-ops' }} && \
+             export API_IMAGE=$PREFIX-api:$TAG MIGRATE_IMAGE=$PREFIX-migrate:$TAG WEB_IMAGE=$PREFIX-web:$TAG && \
+             echo '$GHCR_TOKEN' | docker login ghcr.io -u '$GHCR_USER' --password-stdin && \
+             docker compose pull api migrate web && \
+             docker compose up -d db --wait && \
+             docker compose run --rm migrate && \
+             docker compose up -d --remove-orphans && \
+             docker image prune -f"
+
+      - name: Health check
+        run: |
+          for i in $(seq 1 12); do
+            curl -fsS "http://${{ secrets.EC2_HOST }}/health" && exit 0
+            sleep 5
+          done
+          echo "Health check failed" >&2
+          exit 1
