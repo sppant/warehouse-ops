@@ -8,6 +8,20 @@ on:
 jobs:
   build-and-test:
     runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: warehouse_ops_test
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
     steps:
       - uses: actions/checkout@v4
 
@@ -25,3 +39,13 @@ jobs:
         run: npm test -w apps/api
         env:
           DATABASE_URL: postgresql://user:pass@localhost:5432/unused
+
+      - name: Run migrations on test database
+        run: npm run db:migrate -w apps/api
+        env:
+          DATABASE_URL: postgresql://postgres:postgres@localhost:5432/warehouse_ops_test
+
+      - name: Integration tests
+        run: npm run test:integration -w apps/api
+        env:
+          DATABASE_URL: postgresql://postgres:postgres@localhost:5432/warehouse_ops

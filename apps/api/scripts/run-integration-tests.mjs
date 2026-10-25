@@ -5,12 +5,13 @@ import path from "node:path";
 
 const apiDir = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const rootDir = path.resolve(apiDir, "../..");
-const config = dotenv.config({ path: path.join(apiDir, ".env") }).parsed;
-if (!config?.DATABASE_URL) {
-  throw new Error("DATABASE_URL is missing from apps/api/.env");
+const config = dotenv.config({ path: path.join(apiDir, ".env") }).parsed ?? {};
+const baseUrl = config.DATABASE_URL ?? process.env.DATABASE_URL;
+if (!baseUrl) {
+  throw new Error("DATABASE_URL is missing from apps/api/.env and the environment");
 }
 
-const testUrl = new URL(config.DATABASE_URL);
+const testUrl = new URL(baseUrl);
 testUrl.pathname = "/warehouse_ops_test";
 
 const result = spawnSync(
