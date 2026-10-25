@@ -117,6 +117,7 @@ jobs:
              docker compose pull api migrate web && \
              docker compose up -d db --wait && \
              docker compose run --rm migrate && \
+             docker compose run --rm migrate npm run db:seed -w apps/api && \
              docker compose up -d --remove-orphans && \
              docker image prune -f"
 

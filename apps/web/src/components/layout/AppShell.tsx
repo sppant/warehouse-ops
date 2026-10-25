@@ -54,8 +54,8 @@ export function AppShell() {
           </div>
 
           <div className="user-menu">
-            <div className="avatar">SP</div>
-            <span>Operator</span>
+            <div className="avatar">DU</div>
+            <span>Demo User</span>
           </div>
         </header>
 
