@@ -1,0 +1,12 @@
+{
+  "name": "Warehouse Ops",
+  "short_name": "Warehouse Ops",
+  "description": "Warehouse management: receiving, inventory, picking and cycle counts.",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#080a0d",
+  "theme_color": "#080a0d",
+  "icons": [
+    { "src": "/favicon.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "any" }
+  ]
+}
