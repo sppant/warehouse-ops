@@ -1,0 +1,25 @@
+{
+  "name": "mcp-server",
+  "version": "0.1.0",
+  "description": "Read-only MCP server (stdio) for the Warehouse Ops API",
+  "private": true,
+  "type": "module",
+  "bin": {
+    "warehouse-ops-mcp": "dist/index.js"
+  },
+  "scripts": {
+    "build": "tsc",
+    "start": "node dist/index.js",
+    "test": "vitest run"
+  },
+  "license": "ISC",
+  "dependencies": {
+    "@modelcontextprotocol/server": "^2.4.0",
+    "zod": "^4.6.5"
+  },
+  "devDependencies": {
+    "@types/node": "^26.6.4",
+    "typescript": "^7.0.2",
+    "vitest": "^5.0.3"
+  }
+}
