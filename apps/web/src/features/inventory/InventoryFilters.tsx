@@ -1,13 +1,7 @@
 import { useId } from "react";
 import { Button } from "../../components/ui/Button";
 import { Input } from "../../components/ui/Input";
-import type { StockStatus } from "./overview";
-
-export const statusLabels: Record<StockStatus, string> = {
-  IN_STOCK: "In stock",
-  LOW_STOCK: "Low stock",
-  OUT_OF_STOCK: "Out of stock",
-};
+import { statusLabels, type StockStatus } from "./overview";
 
 type InventoryFiltersProps = {
   locations: Array<{ id: string; label: string }>;

@@ -168,12 +168,22 @@ describe("useCycleCountFlag", () => {
     expect(flagOf(queryClient, "1")).not.toBe(guess);
   });
 
-  it("rolls the row back when the server rejects the change", async () => {
-    fetchMock.mockImplementation((_url: string, init?: RequestInit) =>
-      init?.method === "PUT"
-        ? json({ error: "boom" }, 500)
-        : json(response([item("1"), item("2", "2025-12-31T00:00:00.000Z")])),
-    );
+  it("rolls the row back when the server rejects the change, before any refetch", async () => {
+    let overviewCalls = 0;
+    let failPut!: () => void;
+    fetchMock.mockImplementation((_url: string, init?: RequestInit) => {
+      if (init?.method === "PUT") {
+        return new Promise<Response>((resolve) => {
+          failPut = () => resolve(new Response(JSON.stringify({ error: "boom" }), { status: 500 }));
+        });
+      }
+      overviewCalls += 1;
+      // The refetch after the failure never answers, so the only thing that
+      // can undo the optimistic flag is the rollback itself.
+      return overviewCalls === 1
+        ? json(response([item("1"), item("2", "2025-12-31T00:00:00.000Z")]))
+        : new Promise<Response>(() => undefined);
+    });
     const { queryClient, wrapper } = setup();
 
     const overview = renderHook(() => useInventoryOverview(baseParams), { wrapper });
@@ -181,9 +191,13 @@ describe("useCycleCountFlag", () => {
     const flag = renderHook(() => useCycleCountFlag(), { wrapper });
 
     act(() => flag.result.current.mutate({ id: "1", flagged: true }));
-    await waitFor(() => expect(flag.result.current.isError).toBe(true));
-
+    // First the optimistic flag appears, then the failed PUT takes it away.
+    await waitFor(() => expect(flagOf(queryClient, "1")).not.toBeNull());
+    act(() => failPut());
     await waitFor(() => expect(flagOf(queryClient, "1")).toBeNull());
+
+    // The refetch was requested but is still pending: the revert is the rollback.
+    expect(overviewCalls).toBe(2);
     // Other rows are untouched by the rollback.
     expect(flagOf(queryClient, "2")).toBe("2025-12-31T00:00:00.000Z");
   });

@@ -2,6 +2,12 @@ import { apiFetch } from "../../lib/api";
 
 export type StockStatus = "IN_STOCK" | "LOW_STOCK" | "OUT_OF_STOCK";
 
+export const statusLabels: Record<StockStatus, string> = {
+  IN_STOCK: "In stock",
+  LOW_STOCK: "Low stock",
+  OUT_OF_STOCK: "Out of stock",
+};
+
 export type OverviewSortKey =
   | "product"
   | "sku"

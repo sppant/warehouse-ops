@@ -1,11 +1,11 @@
 import { Badge } from "../../components/ui/Badge";
 import { Button } from "../../components/ui/Button";
-import { statusLabels } from "./InventoryFilters";
-import type {
-  OverviewItem,
-  OverviewSortKey,
-  SortDirection,
-  StockStatus,
+import {
+  statusLabels,
+  type OverviewItem,
+  type OverviewSortKey,
+  type SortDirection,
+  type StockStatus,
 } from "./overview";
 
 const statusVariant = {

@@ -4,6 +4,7 @@ import type { NavLinkRenderProps } from "react-router-dom";
 const navigation = [
   { label: "Dashboard", path: "/" },
   { label: "Inventory", path: "/inventory" },
+  { label: "Inventory Overview", path: "/inventory/overview" },
   { label: "Products", path: "/products" },
   { label: "Purchase Orders", path: "/purchase-orders" },
   { label: "Receiving", path: "/receiving" },
@@ -30,7 +31,7 @@ export function AppShell() {
             <NavLink
               key={item.path}
               to={item.path}
-              end={item.path === "/"}
+              end={item.path === "/" || item.path === "/inventory"}
               className={({ isActive }: NavLinkRenderProps) =>
                 isActive ? "nav-link active" : "nav-link"
               }
