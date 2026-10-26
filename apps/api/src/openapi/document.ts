@@ -1,12 +1,14 @@
 import { buildDocument, type Operation } from "./define.js";
 import { metaOperations } from "./meta.openapi.js";
 import { inventoryOperations } from "../modules/inventory/inventory.openapi.js";
+import { warehouseOperations } from "../modules/warehouses/warehouse.openapi.js";
 import { productOperations } from "../modules/products/product.openapi.js";
 
 const operations: Operation[] = [
   ...metaOperations,
   ...productOperations,
   ...inventoryOperations,
+  ...warehouseOperations,
 ];
 
 export const openApiDocument = buildDocument(operations, {
