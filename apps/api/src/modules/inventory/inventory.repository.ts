@@ -285,6 +285,25 @@ export const inventoryRepository = {
     return rows;
   },
 
+  // Idempotent: flagging an already flagged row keeps its original timestamp.
+  // Deliberately leaves updated_at alone, which records stock changes only.
+  async setCycleCountFlag(id: string, flagged: boolean) {
+    const updated = await db
+      .update(inventory)
+      .set({
+        cycleCountFlaggedAt: flagged
+          ? sql`coalesce(${inventory.cycleCountFlaggedAt}, now())`
+          : null,
+      })
+      .where(eq(inventory.id, id))
+      .returning({
+        id: inventory.id,
+        cycleCountFlaggedAt: inventory.cycleCountFlaggedAt,
+      });
+
+    return updated[0];
+  },
+
   async findMovements(productId?: string, locationId?: string) {
     return db
       .select({

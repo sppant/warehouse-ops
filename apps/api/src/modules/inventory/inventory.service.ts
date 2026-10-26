@@ -25,6 +25,13 @@ export class LocationNotFoundError extends Error {
   }
 }
 
+export class InventoryNotFoundError extends Error {
+  constructor() {
+    super("Inventory record not found");
+    this.name = "InventoryNotFoundError";
+  }
+}
+
 export class InsufficientAvailableInventoryError extends Error {
   constructor() {
     super("Insufficient available inventory");
@@ -99,6 +106,19 @@ export const inventoryService = {
     ]);
 
     return { stockByLocation, movementsPerDay, topItems };
+  },
+
+  async setCycleCountFlag(id: string, flagged: boolean) {
+    const row = await inventoryRepository.setCycleCountFlag(id, flagged);
+
+    if (!row) {
+      throw new InventoryNotFoundError();
+    }
+
+    return {
+      id: row.id,
+      cycleCountFlaggedAt: row.cycleCountFlaggedAt?.toISOString() ?? null,
+    };
   },
 
   async listMovements(query: InventoryMovementsQuery) {

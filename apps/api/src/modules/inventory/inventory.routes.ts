@@ -1,11 +1,14 @@
 import type { FastifyInstance } from "fastify";
 import {
+  cycleCountFlagSchema,
+  inventoryIdParamSchema,
   inventoryMovementsQuerySchema,
   inventoryOverviewQuerySchema,
   inventoryQuerySchema,
   receiveStockSchema,
 } from "./inventory.schema.js";
 import {
+  InventoryNotFoundError,
   LocationNotFoundError,
   ProductNotFoundError,
   inventoryService,
@@ -59,6 +62,36 @@ export async function inventoryRoutes(app: FastifyInstance) {
     const data = await inventoryService.listMovements(query.data);
 
     return { data };
+  });
+
+  app.put("/api/inventory/:id/cycle-count-flag", async (request, reply) => {
+    const params = inventoryIdParamSchema.safeParse(request.params);
+    const body = cycleCountFlagSchema.safeParse(request.body);
+
+    if (!params.success || !body.success) {
+      return reply.status(400).send({
+        error: "Invalid cycle count flag request",
+        details: {
+          params: params.success ? undefined : params.error.flatten(),
+          body: body.success ? undefined : body.error.flatten(),
+        },
+      });
+    }
+
+    try {
+      const data = await inventoryService.setCycleCountFlag(
+        params.data.id,
+        body.data.flagged,
+      );
+
+      return { data };
+    } catch (error) {
+      if (error instanceof InventoryNotFoundError) {
+        return reply.status(404).send({ error: error.message });
+      }
+
+      throw error;
+    }
   });
 
   app.post("/api/inventory/receive", async (request, reply) => {

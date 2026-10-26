@@ -57,6 +57,15 @@ export const inventoryOverviewQuerySchema = z.object({
   pageSize: z.coerce.number().int().min(1).max(100).default(25),
 });
 
+export const inventoryIdParamSchema = z.object({
+  id: z.uuid(),
+});
+
+export const cycleCountFlagSchema = z.object({
+  flagged: z.boolean(),
+});
+
+export type CycleCountFlagInput = z.infer<typeof cycleCountFlagSchema>;
 export type StockStatus = (typeof stockStatuses)[number];
 export type InventoryOverviewQuery = z.infer<typeof inventoryOverviewQuerySchema>;
 export type InventoryQuery = z.infer<typeof inventoryQuerySchema>;

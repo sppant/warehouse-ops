@@ -9,6 +9,7 @@ export default defineConfig({
       "src/modules/picking/pick.integration.ts",
       "src/modules/inventory/inventory-overview.integration.ts",
       "src/modules/inventory/inventory-summary.integration.ts",
+      "src/modules/inventory/inventory-flag.integration.ts",
     ],
     testTimeout: 15000,
     hookTimeout: 15000,
