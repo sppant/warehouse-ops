@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useCallback, useState } from "react";
 import { Card } from "../components/ui/Card";
 import { PageHeader } from "../components/ui/PageHeader";
 import { InventoryCharts } from "../features/inventory/InventoryCharts";
@@ -55,6 +55,9 @@ export function InventoryOverviewPage() {
   const summary = useInventorySummary();
   const locations = useAllLocations();
   const flag = useCycleCountFlag();
+  const { refetch: refetchSummary } = summary;
+  // Stable identity so the memoized charts are not re-rendered needlessly.
+  const retrySummary = useCallback(() => void refetchSummary(), [refetchSummary]);
 
   const meta = overview.data?.meta;
 
@@ -106,7 +109,7 @@ export function InventoryOverviewPage() {
         summary={summary.data}
         isLoading={summary.isPending}
         isError={summary.isError}
-        onRetry={() => void summary.refetch()}
+        onRetry={retrySummary}
       />
 
       <Card>

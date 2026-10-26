@@ -1,4 +1,4 @@
-import type { ReactNode } from "react";
+import { memo, type ReactNode } from "react";
 import {
   Bar,
   BarChart,
@@ -84,7 +84,10 @@ function ChartPanel({
   );
 }
 
-export function InventoryCharts({
+// memo: the charts only depend on the summary, but the page re-renders on every
+// page change, filter and keystroke. Re-rendering recharts is slow (tens of
+// milliseconds), so skip it unless these props actually change.
+export const InventoryCharts = memo(function InventoryCharts({
   summary,
   isLoading,
   isError,
@@ -154,4 +157,4 @@ export function InventoryCharts({
       </ChartPanel>
     </div>
   );
-}
+});
