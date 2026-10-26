@@ -11,7 +11,8 @@
     "db:migrate": "drizzle-kit migrate",
     "test": "vitest run",
     "test:integration": "node scripts/run-integration-tests.mjs",
-    "db:seed": "tsx scripts/seed-demo.ts"
+    "db:seed": "tsx scripts/seed-demo.ts",
+    "db:seed:bulk": "tsx scripts/seed-bulk.ts"
   },
   "keywords": [],
   "author": "",
