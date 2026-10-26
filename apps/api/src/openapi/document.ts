@@ -3,6 +3,7 @@ import { metaOperations } from "./meta.openapi.js";
 import { inventoryOperations } from "../modules/inventory/inventory.openapi.js";
 import { warehouseOperations } from "../modules/warehouses/warehouse.openapi.js";
 import { purchaseOrderOperations } from "../modules/purchase-orders/purchase-order.openapi.js";
+import { salesOrderOperations } from "../modules/sales-orders/sales-order.openapi.js";
 import { productOperations } from "../modules/products/product.openapi.js";
 
 const operations: Operation[] = [
@@ -11,6 +12,7 @@ const operations: Operation[] = [
   ...inventoryOperations,
   ...warehouseOperations,
   ...purchaseOrderOperations,
+  ...salesOrderOperations,
 ];
 
 export const openApiDocument = buildDocument(operations, {
