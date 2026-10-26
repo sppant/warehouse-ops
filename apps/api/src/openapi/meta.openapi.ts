@@ -14,4 +14,17 @@ export const metaOperations: Operation[] = [
       },
     },
   },
+  {
+    method: "get",
+    path: "/api/openapi.json",
+    tag: "Meta",
+    summary: "This OpenAPI document",
+    description: "Generated from the code; the same content is committed as apps/api/openapi.json.",
+    responses: {
+      200: {
+        description: "The OpenAPI 3.1 document",
+        schema: z.looseObject({ openapi: z.string() }),
+      },
+    },
+  },
 ];

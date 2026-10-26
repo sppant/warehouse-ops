@@ -22,6 +22,13 @@ describe("contract: Meta and Products", () => {
     expectConformsToSpec(response, "get", "/health");
   });
 
+  it("GET /api/openapi.json", async () => {
+    const response = await app.inject({ method: "GET", url: "/api/openapi.json" });
+
+    expect(response.statusCode).toBe(200);
+    expectConformsToSpec(response, "get", "/api/openapi.json");
+  });
+
   it("POST /api/products: created, invalid", async () => {
     const payload = { sku: `C-${suffix}`, name: `Contract ${suffix}`, unitCost: 12.5 };
 

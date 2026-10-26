@@ -8,6 +8,7 @@ import { purchaseOrderRoutes } from "./modules/purchase-orders/purchase-order.ro
 import { salesOrderRoutes } from "./modules/sales-orders/sales-order.routes.js";
 import { pickTaskRoutes } from "./modules/picking/pick-task.routes.js";
 import { cycleCountRoutes } from "./modules/cycle-counts/cycle-count.routes.js";
+import { openApiDocument } from "./openapi/document.js";
 
 export const buildApp = () => {
   const app = Fastify({
@@ -28,6 +29,8 @@ export const buildApp = () => {
   app.register(salesOrderRoutes);
   app.register(pickTaskRoutes);
   app.register(cycleCountRoutes);
+
+  app.get("/api/openapi.json", async () => openApiDocument);
 
   app.get("/health", async () => {
     return {

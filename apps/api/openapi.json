@@ -36,6 +36,36 @@
         }
       }
     },
+    "/api/openapi.json": {
+      "get": {
+        "tags": [
+          "Meta"
+        ],
+        "summary": "This OpenAPI document",
+        "description": "Generated from the code; the same content is committed as apps/api/openapi.json.",
+        "responses": {
+          "200": {
+            "description": "The OpenAPI 3.1 document",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "openapi": {
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "openapi"
+                  ],
+                  "additionalProperties": {}
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/products": {
       "get": {
         "tags": [

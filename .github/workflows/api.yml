@@ -34,6 +34,11 @@ jobs:
       - name: Build
         run: npm run build -w apps/api
 
+      # Fails if apps/api/openapi.json no longer matches the code. Fix with
+      # `npm run openapi:generate -w apps/api` and commit the result.
+      - name: Check OpenAPI spec is up to date
+        run: npm run openapi:check -w apps/api
+
       - name: Unit tests
         run: npm test -w apps/api
         env:
