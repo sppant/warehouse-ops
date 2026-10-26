@@ -8,9 +8,16 @@ import { purchaseOrderRoutes } from "./modules/purchase-orders/purchase-order.ro
 import { salesOrderRoutes } from "./modules/sales-orders/sales-order.routes.js";
 import { pickTaskRoutes } from "./modules/picking/pick-task.routes.js";
 import { cycleCountRoutes } from "./modules/cycle-counts/cycle-count.routes.js";
+import { configRoutes } from "./modules/config/config.routes.js";
+import { readFeatureFlags, type FeatureFlags } from "./config/flags.js";
 import { openApiDocument } from "./openapi/document.js";
 
-export const buildApp = () => {
+export type AppOptions = {
+  // Defaults to FEATURE_FLAGS from the environment (all off when unset).
+  flags?: FeatureFlags;
+};
+
+export const buildApp = ({ flags = readFeatureFlags() }: AppOptions = {}) => {
   const app = Fastify({
     logger: false,
   });
@@ -29,6 +36,7 @@ export const buildApp = () => {
   app.register(salesOrderRoutes);
   app.register(pickTaskRoutes);
   app.register(cycleCountRoutes);
+  app.register(configRoutes, { flags });
 
   app.get("/api/openapi.json", async () => openApiDocument);
 
