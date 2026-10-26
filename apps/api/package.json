@@ -13,7 +13,9 @@
     "test:integration": "node scripts/run-integration-tests.mjs",
     "db:seed": "tsx scripts/seed-demo.ts",
     "db:seed:bulk": "tsx scripts/seed-bulk.ts",
-    "bench:api": "tsx scripts/bench-api.ts"
+    "bench:api": "tsx scripts/bench-api.ts",
+    "openapi:generate": "tsx scripts/generate-openapi.ts",
+    "openapi:check": "tsx scripts/generate-openapi.ts --check"
   },
   "keywords": [],
   "author": "",
@@ -29,6 +31,7 @@
   },
   "devDependencies": {
     "@types/node": "^26.6.4",
+    "ajv": "^8.20.0",
     "drizzle-kit": "^0.31.11",
     "tsx": "^4.23.15",
     "typescript": "^7.0.2",
