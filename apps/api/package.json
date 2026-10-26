@@ -12,7 +12,8 @@
     "test": "vitest run",
     "test:integration": "node scripts/run-integration-tests.mjs",
     "db:seed": "tsx scripts/seed-demo.ts",
-    "db:seed:bulk": "tsx scripts/seed-bulk.ts"
+    "db:seed:bulk": "tsx scripts/seed-bulk.ts",
+    "bench:api": "tsx scripts/bench-api.ts"
   },
   "keywords": [],
   "author": "",

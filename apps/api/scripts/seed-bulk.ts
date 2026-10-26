@@ -54,19 +54,28 @@ await sql`
          (random() * 5000)::int
   from generate_series(1, ${PRODUCTS}) n`;
 
-// Each product lives in LOCATIONS_PER_PRODUCT distinct locations. About 10%
-// of rows are empty or fully reserved so every stock status is well populated.
+// Each product lives in LOCATIONS_PER_PRODUCT distinct locations.
 await sql`
-  insert into inventory (product_id, location_id, on_hand, reserved, damaged)
-  select p.id, l.id, s.on_hand,
-         case when random() < 0.15 then s.on_hand else (s.on_hand * random() * 0.3)::int end,
-         case when random() < 0.1 then (random() * 5)::int else 0 end
+  insert into inventory (product_id, location_id)
+  select p.id, l.id
   from (select id, row_number() over (order by sku) as rn from products) p
   join (select id, row_number() over (order by code) as rn from locations) l
-    on ((l.rn + p.rn) % ${LOCATIONS}) < ${LOCATIONS_PER_PRODUCT}
-  cross join lateral (
-    select case when random() < 0.08 then 0 else (random() * 400)::int end as on_hand
-  ) s`;
+    on ((l.rn + p.rn) % ${LOCATIONS}) < ${LOCATIONS_PER_PRODUCT}`;
+
+// Stock levels are set in a separate UPDATE on purpose: random() inside an
+// uncorrelated subquery or LATERAL is evaluated once, which would give every
+// row the same quantity. About 8% of rows are empty, 15% are fully reserved
+// and 10% have damaged units, so every stock status is well populated.
+await sql`
+  update inventory
+  set on_hand = case when random() < 0.08 then 0 else (random() * 400)::int end,
+      damaged = case when random() < 0.1 then (random() * 5)::int else 0 end`;
+await sql`
+  update inventory
+  set reserved = case
+        when random() < 0.15 then on_hand
+        else (on_hand * random() * 0.3)::int
+      end`;
 
 await sql`
   insert into stock_movements (product_id, location_id, type, quantity, created_at)
@@ -80,8 +89,9 @@ await sql`
 
 await sql`analyze`;
 
-const [totals] = await sql<{ inventory: number; movements: number; products: number; locations: number }[]>`
+const [totals] = await sql<{ inventory: number; distinctOnHand: number; movements: number; products: number; locations: number }[]>`
   select (select count(*) from inventory)::int as inventory,
+         (select count(distinct on_hand) from inventory)::int as "distinctOnHand",
          (select count(*) from stock_movements)::int as movements,
          (select count(*) from products)::int as products,
          (select count(*) from locations)::int as locations`;
