@@ -102,6 +102,9 @@ export const inventory = pgTable("inventory", {
   onHand: integer("on_hand").notNull().default(0),
   reserved: integer("reserved").notNull().default(0),
   damaged: integer("damaged").notNull().default(0),
+  // Set when someone asks for this row to be physically recounted. A planning
+  // flag only: it never changes stock and is independent of cycle_counts.
+  cycleCountFlaggedAt: timestamp("cycle_count_flagged_at", { withTimezone: true }),
   updatedAt: timestamp("updated_at", { withTimezone: true }).defaultNow().notNull(),
 }, (table) => [
   uniqueIndex("inventory_product_location_unique").on(

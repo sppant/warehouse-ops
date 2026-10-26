@@ -1,0 +1,1 @@
+ALTER TABLE "inventory" ADD COLUMN "cycle_count_flagged_at" timestamp with time zone;
