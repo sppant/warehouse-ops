@@ -3,6 +3,7 @@ import { locations, products } from "../../db/schema.js";
 import { eq } from "drizzle-orm";
 import type {
   InventoryMovementsQuery,
+  InventoryOverviewQuery,
   InventoryQuery,
   ReceiveStockInput,
   ReleaseStockInput,
@@ -71,6 +72,23 @@ export const inventoryService = {
       ...row,
       available: row.onHand - row.reserved - row.damaged,
     }));
+  },
+
+  async overview(query: InventoryOverviewQuery) {
+    const [data, total] = await Promise.all([
+      inventoryRepository.findOverviewPage(query),
+      inventoryRepository.countOverview(query),
+    ]);
+
+    return {
+      data,
+      meta: {
+        page: query.page,
+        pageSize: query.pageSize,
+        total,
+        totalPages: Math.max(1, Math.ceil(total / query.pageSize)),
+      },
+    };
   },
 
   async listMovements(query: InventoryMovementsQuery) {

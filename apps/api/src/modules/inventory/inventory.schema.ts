@@ -28,6 +28,37 @@ export const inventoryMovementsQuerySchema = z.object({
   locationId: z.uuid().optional(),
 });
 
+export const stockStatuses = ["IN_STOCK", "LOW_STOCK", "OUT_OF_STOCK"] as const;
+
+export const inventoryOverviewSortKeys = [
+  "product",
+  "sku",
+  "location",
+  "onHand",
+  "available",
+  "status",
+  "lastMovement",
+] as const;
+
+// Query-string values arrive as text, so numbers are coerced. An empty
+// search box sends nothing useful, so "" is treated as "no search".
+export const inventoryOverviewQuerySchema = z.object({
+  locationId: z.uuid().optional(),
+  status: z.enum(stockStatuses).optional(),
+  search: z
+    .string()
+    .trim()
+    .max(200)
+    .optional()
+    .transform((value) => value || undefined),
+  sortBy: z.enum(inventoryOverviewSortKeys).default("product"),
+  sortDir: z.enum(["asc", "desc"]).default("asc"),
+  page: z.coerce.number().int().min(1).default(1),
+  pageSize: z.coerce.number().int().min(1).max(100).default(25),
+});
+
+export type StockStatus = (typeof stockStatuses)[number];
+export type InventoryOverviewQuery = z.infer<typeof inventoryOverviewQuerySchema>;
 export type InventoryQuery = z.infer<typeof inventoryQuerySchema>;
 export type ReceiveStockInput = z.infer<typeof receiveStockSchema>;
 export type ReserveStockInput = z.infer<typeof reserveStockSchema>;

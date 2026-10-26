@@ -1,6 +1,7 @@
 import type { FastifyInstance } from "fastify";
 import {
   inventoryMovementsQuerySchema,
+  inventoryOverviewQuerySchema,
   inventoryQuerySchema,
   receiveStockSchema,
 } from "./inventory.schema.js";
@@ -24,6 +25,19 @@ export async function inventoryRoutes(app: FastifyInstance) {
     const data = await inventoryService.list(query.data);
 
     return { data };
+  });
+
+  app.get("/api/inventory/overview", async (request, reply) => {
+    const query = inventoryOverviewQuerySchema.safeParse(request.query);
+
+    if (!query.success) {
+      return reply.status(400).send({
+        error: "Invalid inventory overview query",
+        details: query.error.flatten(),
+      });
+    }
+
+    return inventoryService.overview(query.data);
   });
 
   app.get("/api/inventory/movements", async (request, reply) => {
