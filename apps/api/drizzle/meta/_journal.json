@@ -43,6 +43,13 @@
       "when": 1792978075113,
       "tag": "0005_add_inventory_cycle_count_flag",
       "breakpoints": true
+    },
+    {
+      "idx": 6,
+      "version": "7",
+      "when": 1792979640881,
+      "tag": "0006_add_stock_movement_indexes",
+      "breakpoints": true
     }
   ]
 }

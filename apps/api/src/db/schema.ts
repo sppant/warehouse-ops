@@ -6,6 +6,7 @@ import {
   text,
   timestamp,
   boolean,
+  index,
   uniqueIndex,
   uuid,
 } from "drizzle-orm/pg-core";
@@ -127,8 +128,17 @@ export const stockMovements = pgTable("stock_movements", {
   referenceId: uuid("reference_id"),
   reason: text("reason"),
   createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
-});
-
+}, (table) => [
+  // "Newest movement for this product at this location": the inventory
+  // overview runs it once per row on the page. See "Performance notes" in the README for the measurements.
+  index("stock_movements_product_location_created_idx").on(
+    table.productId,
+    table.locationId,
+    table.createdAt,
+  ),
+  // Range scans over recent movements for the 30-day summary charts.
+  index("stock_movements_created_at_idx").on(table.createdAt),
+]);
 
 export const purchaseOrders = pgTable("purchase_orders", {
   id: uuid("id").defaultRandom().primaryKey(),
