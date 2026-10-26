@@ -8,6 +8,7 @@ export default defineConfig({
       "src/modules/sales-orders/allocate.integration.ts",
       "src/modules/picking/pick.integration.ts",
       "src/modules/inventory/inventory-overview.integration.ts",
+      "src/modules/inventory/inventory-summary.integration.ts",
     ],
     testTimeout: 15000,
     hookTimeout: 15000,

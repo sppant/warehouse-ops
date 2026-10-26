@@ -91,6 +91,16 @@ export const inventoryService = {
     };
   },
 
+  async summary() {
+    const [stockByLocation, movementsPerDay, topItems] = await Promise.all([
+      inventoryRepository.findStockByLocation(),
+      inventoryRepository.findMovementsPerDay(),
+      inventoryRepository.findTopMovedItems(),
+    ]);
+
+    return { stockByLocation, movementsPerDay, topItems };
+  },
+
   async listMovements(query: InventoryMovementsQuery) {
     return inventoryRepository.findMovements(
       query.productId,

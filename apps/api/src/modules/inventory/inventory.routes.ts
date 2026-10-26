@@ -40,6 +40,12 @@ export async function inventoryRoutes(app: FastifyInstance) {
     return inventoryService.overview(query.data);
   });
 
+  app.get("/api/inventory/summary", async () => {
+    const data = await inventoryService.summary();
+
+    return { data };
+  });
+
   app.get("/api/inventory/movements", async (request, reply) => {
     const query = inventoryMovementsQuerySchema.safeParse(request.query);
 

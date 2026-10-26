@@ -81,7 +81,118 @@ export type InventoryOverviewRow = {
   cycleCountFlaggedAt: string | null;
 };
 
+// Summary charts cover the last 30 UTC calendar days, today included. Computed
+// in SQL from the database clock so the three aggregates share one window.
+const SUMMARY_WINDOW_DAYS = 30;
+const TOP_ITEMS_LIMIT = 10;
+const STOCK_BY_LOCATION_LIMIT = 20;
+
+const WINDOW_START_SQL = sql`
+  (date_trunc('day', now() AT TIME ZONE 'UTC') - make_interval(days => ${SUMMARY_WINDOW_DAYS - 1})) AT TIME ZONE 'UTC'
+`;
+
+export type StockByLocationRow = {
+  locationId: string;
+  locationCode: string;
+  warehouseCode: string;
+  onHand: number;
+  available: number;
+};
+
+export type MovementsPerDayRow = {
+  date: string;
+  count: number;
+  volume: number;
+};
+
+export type TopMovedItemRow = {
+  productId: string;
+  sku: string;
+  productName: string;
+  movementCount: number;
+  volume: number;
+};
+
 export const inventoryRepository = {
+  async findStockByLocation() {
+    const rows = await db.execute<StockByLocationRow>(sql`
+      SELECT
+        l.id AS "locationId",
+        l.code AS "locationCode",
+        w.code AS "warehouseCode",
+        sum(i.on_hand)::int AS "onHand",
+        sum(i.on_hand - i.reserved - i.damaged)::int AS available
+      FROM inventory i
+      JOIN locations l ON l.id = i.location_id
+      JOIN warehouses w ON w.id = l.warehouse_id
+      GROUP BY l.id, l.code, w.code
+      ORDER BY "onHand" DESC, l.code
+      LIMIT ${STOCK_BY_LOCATION_LIMIT}
+    `);
+
+    return Array.from(rows);
+  },
+
+  // One row per day even when nothing moved, so the chart has no gaps.
+  // volume is units moved regardless of direction: quantities are stored
+  // unsigned except ADJUSTMENT, so abs() makes them comparable.
+  async findMovementsPerDay() {
+    const rows = await db.execute<MovementsPerDayRow>(sql`
+      WITH days AS (
+        SELECT d::date AS day
+        FROM generate_series(
+          (${WINDOW_START_SQL} AT TIME ZONE 'UTC')::date,
+          (now() AT TIME ZONE 'UTC')::date,
+          interval '1 day'
+        ) AS d
+      ),
+      daily AS (
+        SELECT
+          (m.created_at AT TIME ZONE 'UTC')::date AS day,
+          count(*)::int AS count,
+          sum(abs(m.quantity))::int AS volume
+        FROM stock_movements m
+        WHERE m.created_at >= ${WINDOW_START_SQL}
+        GROUP BY 1
+      )
+      SELECT
+        to_char(days.day, 'YYYY-MM-DD') AS date,
+        coalesce(daily.count, 0) AS count,
+        coalesce(daily.volume, 0) AS volume
+      FROM days
+      LEFT JOIN daily ON daily.day = days.day
+      ORDER BY days.day
+    `);
+
+    return Array.from(rows);
+  },
+
+  async findTopMovedItems() {
+    const rows = await db.execute<TopMovedItemRow>(sql`
+      SELECT
+        p.id AS "productId",
+        p.sku,
+        p.name AS "productName",
+        t.movement_count AS "movementCount",
+        t.volume
+      FROM (
+        SELECT
+          m.product_id,
+          count(*)::int AS movement_count,
+          sum(abs(m.quantity))::int AS volume
+        FROM stock_movements m
+        WHERE m.created_at >= ${WINDOW_START_SQL}
+        GROUP BY m.product_id
+        ORDER BY volume DESC
+        LIMIT ${TOP_ITEMS_LIMIT}
+      ) t
+      JOIN products p ON p.id = t.product_id
+      ORDER BY t.volume DESC, p.sku
+    `);
+
+    return Array.from(rows);
+  },
+
   async findOverviewPage(query: InventoryOverviewQuery) {
     const direction = query.sortDir === "desc" ? sql`DESC` : sql`ASC`;
     const offset = (query.page - 1) * query.pageSize;
