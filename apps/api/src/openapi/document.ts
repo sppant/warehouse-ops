@@ -6,6 +6,8 @@ import { purchaseOrderOperations } from "../modules/purchase-orders/purchase-ord
 import { salesOrderOperations } from "../modules/sales-orders/sales-order.openapi.js";
 import { pickTaskOperations } from "../modules/picking/pick-task.openapi.js";
 import { cycleCountOperations } from "../modules/cycle-counts/cycle-count.openapi.js";
+import { itemOperations } from "../modules/items/item.openapi.js";
+import { configOperations } from "../modules/config/config.openapi.js";
 import { productOperations } from "../modules/products/product.openapi.js";
 
 const operations: Operation[] = [
@@ -17,6 +19,8 @@ const operations: Operation[] = [
   ...salesOrderOperations,
   ...pickTaskOperations,
   ...cycleCountOperations,
+  ...itemOperations,
+  ...configOperations,
 ];
 
 export const openApiDocument = buildDocument(operations, {

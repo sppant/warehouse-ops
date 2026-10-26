@@ -4567,6 +4567,157 @@
           }
         }
       }
+    },
+    "/api/items/{sku}/movements.csv": {
+      "get": {
+        "tags": [
+          "Items"
+        ],
+        "summary": "Export an item's stock movements as CSV",
+        "description": "Behind a feature flag (movementsCsvExport), 404 when disabled.\n\nOne row per stock movement of the product with this exact SKU, newest first, optionally limited to one location.\nColumns: createdAt (ISO 8601 UTC), sku, productName, locationCode, type, quantity, referenceType, referenceId, reason.\nQuantity is unsigned except for ADJUSTMENT, which can be negative. Empty values are empty cells.\nLines end with CRLF (RFC 4180) and cells are quoted when needed. Text cells that start with = + - @ (or a tab or carriage return) are prefixed with an apostrophe so spreadsheets do not run them as formulas; quantity is always a plain number.\nAn item with no movements returns the header row only.",
+        "parameters": [
+          {
+            "name": "sku",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 100
+            }
+          },
+          {
+            "name": "locationId",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "The CSV file",
+            "headers": {
+              "Content-Disposition": {
+                "description": "attachment; filename=\"movements-<sku>.csv\"",
+                "schema": {
+                  "type": "string"
+                }
+              }
+            },
+            "content": {
+              "text/csv": {
+                "schema": {
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "The SKU is empty or too long, or locationId is not a UUID",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No product with this SKU, or the feature flag is disabled (then the route does not exist and Fastify's default body is returned)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "anyOf": [
+                    {
+                      "type": "object",
+                      "properties": {
+                        "error": {
+                          "type": "string"
+                        },
+                        "details": {
+                          "type": "object",
+                          "propertyNames": {
+                            "type": "string"
+                          },
+                          "additionalProperties": {}
+                        }
+                      },
+                      "required": [
+                        "error"
+                      ],
+                      "additionalProperties": false
+                    },
+                    {
+                      "type": "object",
+                      "properties": {
+                        "message": {
+                          "type": "string"
+                        },
+                        "error": {
+                          "type": "string"
+                        },
+                        "statusCode": {
+                          "type": "number",
+                          "const": 404
+                        }
+                      },
+                      "required": [
+                        "message",
+                        "error",
+                        "statusCode"
+                      ],
+                      "additionalProperties": false
+                    }
+                  ]
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/config/flags": {
+      "get": {
+        "tags": [
+          "Config"
+        ],
+        "summary": "Feature flags",
+        "description": "Which feature flags are on in this environment. All flags default to off. The web app uses this to show or hide features.",
+        "responses": {
+          "200": {
+            "description": "Flag states",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "data": {
+                      "type": "object",
+                      "properties": {
+                        "movementsCsvExport": {
+                          "type": "boolean",
+                          "description": "Enables GET /api/items/{sku}/movements.csv and the Export CSV button."
+                        }
+                      },
+                      "required": [
+                        "movementsCsvExport"
+                      ],
+                      "additionalProperties": false
+                    }
+                  },
+                  "required": [
+                    "data"
+                  ],
+                  "additionalProperties": false
+                }
+              }
+            }
+          }
+        }
+      }
     }
   },
   "components": {
