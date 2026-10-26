@@ -1,5 +1,6 @@
 import { useCallback, useState } from "react";
 import { Card } from "../components/ui/Card";
+import { useFeatureFlags } from "../features/config/queries";
 import { PageHeader } from "../components/ui/PageHeader";
 import { InventoryCharts } from "../features/inventory/InventoryCharts";
 import { InventoryFilters } from "../features/inventory/InventoryFilters";
@@ -13,6 +14,7 @@ import type {
 import {
   useAllLocations,
   useCycleCountFlag,
+  useExportMovementsCsv,
   useInventoryOverview,
   useInventorySummary,
 } from "../features/inventory/queries";
@@ -55,6 +57,8 @@ export function InventoryOverviewPage() {
   const summary = useInventorySummary();
   const locations = useAllLocations();
   const flag = useCycleCountFlag();
+  const flags = useFeatureFlags();
+  const exportCsv = useExportMovementsCsv();
   const { refetch: refetchSummary } = summary;
   // Stable identity so the memoized charts are not re-rendered needlessly.
   const retrySummary = useCallback(() => void refetchSummary(), [refetchSummary]);
@@ -82,6 +86,8 @@ export function InventoryOverviewPage() {
   const handleToggleFlag = (item: OverviewItem) =>
     flag.mutate({ id: item.id, flagged: !item.cycleCountFlaggedAt });
 
+  const handleExportCsv = (item: OverviewItem) => exportCsv.mutate(item.sku);
+
   const clearFilters = () => {
     setSearch("");
     setLocationId("");
@@ -92,11 +98,13 @@ export function InventoryOverviewPage() {
   const hasData = overview.data !== undefined;
   const statusMessage = flag.isError
     ? { text: "Couldn't update the flag, so the change was reverted.", error: true }
-    : overview.isError && hasData
-      ? { text: "Couldn't refresh. Showing the last loaded data.", error: true }
-      : overview.isFetching && !overview.isPlaceholderData && hasData
-        ? { text: "Refreshing…", error: false }
-        : null;
+    : exportCsv.isError
+      ? { text: "Couldn't export the CSV. Try again.", error: true }
+      : overview.isError && hasData
+        ? { text: "Couldn't refresh. Showing the last loaded data.", error: true }
+        : overview.isFetching && !overview.isPlaceholderData && hasData
+          ? { text: "Refreshing…", error: false }
+          : null;
 
   return (
     <div className="page">
@@ -157,6 +165,8 @@ export function InventoryOverviewPage() {
           onSortChange={handleSort}
           onPageChange={goToPage}
           onToggleFlag={handleToggleFlag}
+          pendingExportSku={exportCsv.isPending ? exportCsv.variables : undefined}
+          onExportCsv={flags.movementsCsvExport ? handleExportCsv : undefined}
         />
       </Card>
     </div>

@@ -48,10 +48,13 @@ type InventoryTableProps = {
   isError: boolean;
   hasActiveFilters: boolean;
   pendingFlagId?: string;
+  pendingExportSku?: string;
   onRetry: () => void;
   onSortChange: (key: OverviewSortKey) => void;
   onPageChange: (page: number) => void;
   onToggleFlag: (item: OverviewItem) => void;
+  // The Export CSV button only exists when this is passed (feature flag).
+  onExportCsv?: (item: OverviewItem) => void;
 };
 
 export function InventoryTable({
@@ -67,10 +70,12 @@ export function InventoryTable({
   isError,
   hasActiveFilters,
   pendingFlagId,
+  pendingExportSku,
   onRetry,
   onSortChange,
   onPageChange,
   onToggleFlag,
+  onExportCsv,
 }: InventoryTableProps) {
   const showRows = items.length > 0;
   const showEmpty = !isLoading && !isError && !showRows;
@@ -164,19 +169,33 @@ export function InventoryTable({
                     : "—"}
                 </td>
                 <td className="inv-actions">
-                  <Button
-                    type="button"
-                    variant={item.cycleCountFlaggedAt ? "primary" : "secondary"}
-                    disabled={pendingFlagId === item.id}
-                    aria-label={
-                      item.cycleCountFlaggedAt
-                        ? `Flagged: ${item.sku} at ${item.locationCode}. Remove cycle count flag`
-                        : `Flag ${item.sku} at ${item.locationCode} for cycle count`
-                    }
-                    onClick={() => onToggleFlag(item)}
-                  >
-                    {item.cycleCountFlaggedAt ? "Flagged" : "Flag"}
-                  </Button>
+                  <div className="inv-actions-group">
+                    <Button
+                      type="button"
+                      variant={item.cycleCountFlaggedAt ? "primary" : "secondary"}
+                      disabled={pendingFlagId === item.id}
+                      aria-label={
+                        item.cycleCountFlaggedAt
+                          ? `Flagged: ${item.sku} at ${item.locationCode}. Remove cycle count flag`
+                          : `Flag ${item.sku} at ${item.locationCode} for cycle count`
+                      }
+                      onClick={() => onToggleFlag(item)}
+                    >
+                      {item.cycleCountFlaggedAt ? "Flagged" : "Flag"}
+                    </Button>
+                    {onExportCsv && (
+                      <Button
+                        type="button"
+                        variant="secondary"
+                        disabled={pendingExportSku === item.sku}
+                        title="Download all stock movements of this SKU, every location"
+                        aria-label={`Export stock movements of ${item.sku} as CSV`}
+                        onClick={() => onExportCsv(item)}
+                      >
+                        Export CSV
+                      </Button>
+                    )}
+                  </div>
                 </td>
               </tr>
             ))}

@@ -1532,7 +1532,7 @@
 }
 
 .inv-table th:nth-child(1) { width: 22%; }
-.inv-table th:nth-child(8) { width: 90px; }
+.inv-table th:nth-child(8) { width: 200px; }
 
 .inv-num {
   text-align: right !important;
@@ -1559,6 +1559,12 @@
   display: inline-block;
   width: 10px;
   font-size: 8px;
+}
+
+.inv-actions-group {
+  display: flex;
+  align-items: center;
+  gap: 8px;
 }
 
 .inv-actions .ui-button {

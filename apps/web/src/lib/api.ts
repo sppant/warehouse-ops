@@ -1,5 +1,7 @@
 const API_BASE_URL = import.meta.env.VITE_API_URL ?? "";
 
+export const apiUrl = (path: string) => `${API_BASE_URL}${path}`;
+
 export class ApiError extends Error {
   public readonly status: number;
 

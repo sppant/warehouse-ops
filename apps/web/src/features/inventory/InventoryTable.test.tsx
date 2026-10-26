@@ -197,3 +197,23 @@ describe("InventoryTable flag button", () => {
     expect(button).toBeDisabled();
   });
 });
+
+describe("InventoryTable Export CSV", () => {
+  it("has no Export CSV button unless a handler is passed", () => {
+    setup();
+
+    expect(screen.queryByRole("button", { name: /export/i })).not.toBeInTheDocument();
+  });
+
+  it("calls the handler with the row's item, and disables the pending SKU", async () => {
+    const onExportCsv = vi.fn();
+    const user = userEvent.setup();
+    const view = setup({ onExportCsv });
+
+    await user.click(screen.getByRole("button", { name: "Export stock movements of BLT-2001 as CSV" }));
+    expect(onExportCsv).toHaveBeenCalledWith(expect.objectContaining({ sku: "BLT-2001" }));
+
+    view.rerender(<InventoryTable {...({ items: [item()], pageSize: 10, page: 1, totalPages: 1, total: 1, sortBy: "product", sortDir: "asc", isLoading: false, isRefreshing: false, isError: false, hasActiveFilters: false, onRetry: vi.fn(), onSortChange: vi.fn(), onPageChange: vi.fn(), onToggleFlag: vi.fn(), onExportCsv, pendingExportSku: "BLT-2001" } satisfies Props)} />);
+    expect(screen.getByRole("button", { name: "Export stock movements of BLT-2001 as CSV" })).toBeDisabled();
+  });
+});

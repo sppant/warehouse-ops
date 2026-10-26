@@ -42,6 +42,8 @@ describe("InventoryOverviewPage", () => {
   const fetchMock = vi.fn();
   let overviewHandler: (params: URLSearchParams) => Response | Promise<Response>;
   let flagHandler: () => Response | Promise<Response>;
+  let featureFlagsHandler: () => Response | Promise<Response>;
+  let csvHandler: () => Response | Promise<Response>;
 
   beforeEach(() => {
     vi.stubGlobal("fetch", fetchMock);
@@ -54,8 +56,13 @@ describe("InventoryOverviewPage", () => {
     };
     flagHandler = () => json({ data: { id: "id-1", cycleCountFlaggedAt: "2026-10-10T00:00:00.000Z" } });
 
+    featureFlagsHandler = () => json({ data: { movementsCsvExport: false } });
+    csvHandler = () => new Response("createdAt,sku\r\n", { headers: { "Content-Disposition": 'attachment; filename="movements-SKU-1.csv"' } });
+
     fetchMock.mockImplementation((input: string, init?: RequestInit) => {
       const url = String(input);
+      if (url === "/api/config/flags") return featureFlagsHandler();
+      if (url.startsWith("/api/items/")) return csvHandler();
       if (url === "/api/warehouses") return json({ data: [{ id: "w1", code: "W1", name: "Main", createdAt: "" }] });
       if (url === "/api/warehouses/w1/locations") return json({ data: [{ id: "l1", warehouseId: "w1", code: "A-01", name: "A", createdAt: "" }] });
       if (url === "/api/inventory/summary") return json({ data: { stockByLocation: [], movementsPerDay: [], topItems: [] } });
@@ -209,5 +216,66 @@ describe("InventoryOverviewPage", () => {
     expect(
       await within(table).findByRole("button", { name: "Flag SKU-1 at A-01 for cycle count" }),
     ).toBeInTheDocument();
+  });
+
+  describe("Export CSV (movementsCsvExport flag)", () => {
+    const exportButton = () => screen.queryByRole("button", { name: "Export stock movements of SKU-1 as CSV" });
+
+    it("is hidden when the flag is off", async () => {
+      renderPage();
+      await screen.findByText("Product 1");
+      await waitFor(() => expect(fetchMock).toHaveBeenCalledWith("/api/config/flags", expect.anything()));
+
+      expect(exportButton()).not.toBeInTheDocument();
+      expect(screen.queryByText("Export CSV")).not.toBeInTheDocument();
+    });
+
+    it("is hidden when the flags request fails", async () => {
+      featureFlagsHandler = () => json({ error: "down" }, 500);
+      renderPage();
+      await screen.findByText("Product 1");
+      await waitFor(() => expect(fetchMock).toHaveBeenCalledWith("/api/config/flags", expect.anything()));
+
+      expect(exportButton()).not.toBeInTheDocument();
+    });
+
+    it("shows on every row when the flag is on, and downloads that SKU's file", async () => {
+      featureFlagsHandler = () => json({ data: { movementsCsvExport: true } });
+      const createObjectURL = vi.fn(() => "blob:csv");
+      const revokeObjectURL = vi.fn();
+      // jsdom has no object URLs; set them for this test only.
+      const urlApi = URL as unknown as Record<string, unknown>;
+      urlApi.createObjectURL = createObjectURL;
+      urlApi.revokeObjectURL = revokeObjectURL;
+      const click = vi.spyOn(HTMLAnchorElement.prototype, "click").mockImplementation(function (this: HTMLAnchorElement) {
+        expect(this.download).toBe("movements-SKU-1.csv");
+      });
+      const user = userEvent.setup();
+      renderPage();
+      await screen.findByText("Product 1");
+
+      await user.click(await screen.findByRole("button", { name: "Export stock movements of SKU-1 as CSV" }));
+
+      await waitFor(() => expect(click).toHaveBeenCalledTimes(1));
+      expect(fetchMock).toHaveBeenCalledWith("/api/items/SKU-1/movements.csv");
+      expect(createObjectURL).toHaveBeenCalledTimes(1);
+      expect(revokeObjectURL).toHaveBeenCalledWith("blob:csv");
+
+      click.mockRestore();
+      delete urlApi.createObjectURL;
+      delete urlApi.revokeObjectURL;
+    });
+
+    it("says so when the export fails", async () => {
+      featureFlagsHandler = () => json({ data: { movementsCsvExport: true } });
+      csvHandler = () => json({ error: "No product with this SKU" }, 404);
+      const user = userEvent.setup();
+      renderPage();
+      await screen.findByText("Product 1");
+
+      await user.click(await screen.findByRole("button", { name: "Export stock movements of SKU-1 as CSV" }));
+
+      expect(await screen.findByText(/couldn't export the csv/i)).toBeInTheDocument();
+    });
   });
 });

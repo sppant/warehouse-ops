@@ -6,6 +6,7 @@ import {
   type QueryClient,
 } from "@tanstack/react-query";
 import { getLocations, getWarehouses } from "../warehouses/api";
+import { downloadMovementsCsv } from "./exportCsv";
 import {
   getInventoryOverview,
   getInventorySummary,
@@ -139,4 +140,8 @@ export function useCycleCountFlag() {
       }
     },
   });
+}
+
+export function useExportMovementsCsv() {
+  return useMutation({ mutationFn: downloadMovementsCsv });
 }
