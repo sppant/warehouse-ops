@@ -4574,7 +4574,7 @@
           "Items"
         ],
         "summary": "Export an item's stock movements as CSV",
-        "description": "Behind a feature flag (movementsCsvExport), 404 when disabled.\n\nOne row per stock movement of the product with this exact SKU, newest first, optionally limited to one location.\nColumns: createdAt (ISO 8601 UTC), sku, productName, locationCode, type, quantity, referenceType, referenceId, reason.\nQuantity is unsigned except for ADJUSTMENT, which can be negative. Empty values are empty cells.\nLines end with CRLF (RFC 4180) and cells are quoted when needed. Text cells that start with = + - @ (or a tab or carriage return) are prefixed with an apostrophe so spreadsheets do not run them as formulas; quantity is always a plain number.\nAn item with no movements returns the header row only.",
+        "description": "Behind a feature flag (movementsCsvExport), 404 when disabled.\n\nOne row per stock movement of the product with this exact SKU, newest first, optionally limited to one location.\nColumns: createdAt (ISO 8601 UTC), sku, productName, locationCode, type, quantity, referenceType, referenceId, reason.\nQuantity is unsigned except for ADJUSTMENT, which can be negative. Empty values are empty cells.\nLines end with CRLF (RFC 4180) and cells are quoted when needed. Text cells that start with = + - @ (or a tab or carriage return) are prefixed with an apostrophe so spreadsheets do not run them as formulas; quantity is always a plain number.\nAn item with no movements returns the header row only.\nSKUs are at most 100 characters; a longer value cannot match a product, and Fastify refuses such a URL itself (414) before this route runs.",
         "parameters": [
           {
             "name": "sku",
@@ -4616,7 +4616,7 @@
             }
           },
           "400": {
-            "description": "The SKU is empty or too long, or locationId is not a UUID",
+            "description": "The SKU is blank, or locationId is not a UUID",
             "content": {
               "application/json": {
                 "schema": {

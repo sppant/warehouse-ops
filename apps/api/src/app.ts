@@ -8,6 +8,7 @@ import { purchaseOrderRoutes } from "./modules/purchase-orders/purchase-order.ro
 import { salesOrderRoutes } from "./modules/sales-orders/sales-order.routes.js";
 import { pickTaskRoutes } from "./modules/picking/pick-task.routes.js";
 import { cycleCountRoutes } from "./modules/cycle-counts/cycle-count.routes.js";
+import { itemRoutes } from "./modules/items/item.routes.js";
 import { configRoutes } from "./modules/config/config.routes.js";
 import { readFeatureFlags, type FeatureFlags } from "./config/flags.js";
 import { openApiDocument } from "./openapi/document.js";
@@ -37,6 +38,10 @@ export const buildApp = ({ flags = readFeatureFlags() }: AppOptions = {}) => {
   app.register(pickTaskRoutes);
   app.register(cycleCountRoutes);
   app.register(configRoutes, { flags });
+
+  if (flags.movementsCsvExport) {
+    app.register(itemRoutes);
+  }
 
   app.get("/api/openapi.json", async () => openApiDocument);
 

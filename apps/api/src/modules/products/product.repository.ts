@@ -28,6 +28,16 @@ export const productRepository = {
     return result[0] ?? null;
   },
 
+  async findBySku(sku: string) {
+    const result = await db
+      .select()
+      .from(products)
+      .where(eq(products.sku, sku))
+      .limit(1);
+
+    return result[0] ?? null;
+  },
+
   async create(data: typeof products.$inferInsert) {
     const result = await db
       .insert(products)

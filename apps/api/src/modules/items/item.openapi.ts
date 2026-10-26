@@ -28,6 +28,7 @@ export const itemOperations: Operation[] = [
       "Quantity is unsigned except for ADJUSTMENT, which can be negative. Empty values are empty cells.",
       "Lines end with CRLF (RFC 4180) and cells are quoted when needed. Text cells that start with = + - @ (or a tab or carriage return) are prefixed with an apostrophe so spreadsheets do not run them as formulas; quantity is always a plain number.",
       "An item with no movements returns the header row only.",
+      "SKUs are at most 100 characters; a longer value cannot match a product, and Fastify refuses such a URL itself (414) before this route runs.",
     ].join("\n"),
     params: itemSkuParamSchema,
     query: itemMovementsCsvQuerySchema,
@@ -43,7 +44,7 @@ export const itemOperations: Operation[] = [
           },
         },
       },
-      400: badRequest("The SKU is empty or too long, or locationId is not a UUID"),
+      400: badRequest("The SKU is blank, or locationId is not a UUID"),
       404: {
         description:
           "No product with this SKU, or the feature flag is disabled (then the route does not exist and Fastify's default body is returned)",
