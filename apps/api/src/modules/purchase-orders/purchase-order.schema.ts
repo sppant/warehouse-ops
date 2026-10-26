@@ -1,6 +1,6 @@
 import { z } from "zod";
 
-const purchaseOrderStatus = z.enum([
+export const purchaseOrderStatus = z.enum([
   "DRAFT",
   "ORDERED",
   "PARTIALLY_RECEIVED",
