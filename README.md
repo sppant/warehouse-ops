@@ -76,9 +76,54 @@ npm run dev:web   # Vite dev server on http://localhost:5173
 
 ```bash
 npm run test -w apps/api               # unit tests
-npm run test:integration -w apps/api   # integration tests (needs a *_test database; see apps/api/scripts/run-integration-tests.mjs)
+npm run test:integration -w apps/api   # integration + OpenAPI contract tests (needs a *_test database; see apps/api/scripts/run-integration-tests.mjs)
+npm run openapi:check -w apps/api      # is apps/api/openapi.json up to date?
+npm run test -w packages/mcp-server    # MCP server tests
 npm run lint -w apps/web
 ```
+
+## API contract
+
+The API is described by an OpenAPI 3.1 file: [`apps/api/openapi.json`](apps/api/openapi.json). A running API serves the same document at `GET /api/openapi.json`.
+
+**How it is made.** For the endpoints that existed before this was added, the spec is **generated from the code (code-first)**. It is not a hand-written design that the code was built from. Request bodies, parameters and query strings come from the Zod schemas the routes already validate with. The routes have no response schemas, so the response shapes are Zod schemas written next to each module (`apps/api/src/modules/*/*.openapi.ts`) and checked against real responses by the contract tests below. A small builder (`apps/api/src/openapi/`) turns them into the JSON file.
+
+```bash
+npm run openapi:generate -w apps/api   # rewrite apps/api/openapi.json from the code
+npm run openapi:check -w apps/api      # fail if the committed file is out of date
+```
+
+**How it is checked.**
+- CI runs `openapi:check` (in `api.yml`, so it also gates a deploy). Change an endpoint and forget to regenerate, and CI fails.
+- Contract tests (`apps/api/src/contract/`) send real requests through the app, against the test database, and validate every response (status code, content type, body) against `openapi.json`. A response that gains, loses or retypes a field fails the test. Each suite also fails if an endpoint in its group has no checked response, so a new endpoint cannot ship without one. Run them with `npm run test:integration -w apps/api`.
+
+**How new endpoints are designed (contract first).**
+1. Change the spec first: add the operation (parameters, responses, errors, content type) and its request schemas, regenerate `openapi.json`, and commit that on its own.
+2. Write the code so it conforms to the spec.
+3. Add a contract test for it (success, not found, invalid input).
+
+`GET /api/items/{sku}/movements.csv` was built this way; see the first commit of that change (`docs(api): add the CSV export endpoint ...`) and the commit that implements it.
+
+**Known gaps.** The spec documents what the API does today, including odd corners that are not documented as errors: a duplicate product SKU answers 500 (the route intends 409), and a non-UUID purchase order item id answers 500. There is no authentication, so the spec has none.
+
+## Feature flags
+
+A flag lets a feature ship in the code but stay switched off until it has been proven.
+
+- **Defined in** `apps/api/src/config/flags.ts`: a fixed list of names. Today there is one, `movementsCsvExport` (CSV export of an item's stock movements).
+- **Read from** the `FEATURE_FLAGS` environment variable, a comma-separated list of the flags to turn on. Anything not listed is off, and unknown names are ignored with a warning.
+- **Default is off, everywhere.** `compose.yaml` and the deploy workflow do not set `FEATURE_FLAGS`, so production has every flag off. Turning one on in a deployed environment is a deliberate, separate change.
+- **Turn one on locally:**
+  ```bash
+  FEATURE_FLAGS=movementsCsvExport npm run dev:api
+  ```
+- **Backend:** with the flag off, the route is never registered, so the API answers 404 as for any path that does not exist. `buildApp({ flags })` takes the flags directly, which is how tests run both states.
+- **Frontend:** the web app asks `GET /api/config/flags` once and hides the feature when the flag is off, while loading, and if the request fails.
+- **Lifecycle:** ship the feature behind a default-off flag, prove it with real use (turn it on, watch it work), then remove the flag last: delete the flag check and the name from `flags.ts`, and make the feature unconditional.
+
+## Backward compatibility
+
+Consumers such as the MCP server (`packages/mcp-server`) read the API's JSON. The spec and its check protect them in two ways: changing an existing endpoint's response shows up as a diff in `openapi.json` that a reviewer has to approve, and the contract tests fail if a response no longer matches the committed spec. New endpoints and new flags are additive and do not change any existing request or response. The spec check does not read the MCP server's own code, so run `npm test -w packages/mcp-server` as well when you change a response the MCP server uses.
 
 ## Inventory Overview
 
