@@ -3370,6 +3370,492 @@
           }
         }
       }
+    },
+    "/api/pick-tasks": {
+      "get": {
+        "tags": [
+          "Picking"
+        ],
+        "summary": "List pick tasks",
+        "description": "Newest first.",
+        "responses": {
+          "200": {
+            "description": "Pick tasks",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "data": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "id": {
+                            "type": "string",
+                            "format": "uuid"
+                          },
+                          "salesOrderId": {
+                            "type": "string",
+                            "format": "uuid"
+                          },
+                          "orderNumber": {
+                            "type": "string"
+                          },
+                          "customer": {
+                            "type": "string"
+                          },
+                          "status": {
+                            "type": "string",
+                            "enum": [
+                              "PENDING",
+                              "IN_PROGRESS",
+                              "COMPLETED",
+                              "CANCELLED"
+                            ]
+                          },
+                          "createdAt": {
+                            "type": "string",
+                            "format": "date-time"
+                          },
+                          "completedAt": {
+                            "anyOf": [
+                              {
+                                "type": "string",
+                                "format": "date-time"
+                              },
+                              {
+                                "type": "null"
+                              }
+                            ]
+                          }
+                        },
+                        "required": [
+                          "id",
+                          "salesOrderId",
+                          "orderNumber",
+                          "customer",
+                          "status",
+                          "createdAt",
+                          "completedAt"
+                        ],
+                        "additionalProperties": false
+                      }
+                    }
+                  },
+                  "required": [
+                    "data"
+                  ],
+                  "additionalProperties": false
+                }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "tags": [
+          "Picking"
+        ],
+        "summary": "Generate a pick task for an allocated sales order",
+        "description": "Moves the order to PICKING. 400 also covers an order that is not ALLOCATED.",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "salesOrderId": {
+                    "type": "string",
+                    "format": "uuid"
+                  }
+                },
+                "required": [
+                  "salesOrderId"
+                ]
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "The created task",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "data": {
+                      "type": "object",
+                      "properties": {
+                        "id": {
+                          "type": "string",
+                          "format": "uuid"
+                        },
+                        "salesOrderId": {
+                          "type": "string",
+                          "format": "uuid"
+                        },
+                        "status": {
+                          "type": "string",
+                          "enum": [
+                            "PENDING",
+                            "IN_PROGRESS",
+                            "COMPLETED",
+                            "CANCELLED"
+                          ]
+                        },
+                        "createdAt": {
+                          "type": "string",
+                          "format": "date-time"
+                        },
+                        "completedAt": {
+                          "anyOf": [
+                            {
+                              "type": "string",
+                              "format": "date-time"
+                            },
+                            {
+                              "type": "null"
+                            }
+                          ]
+                        }
+                      },
+                      "required": [
+                        "id",
+                        "salesOrderId",
+                        "status",
+                        "createdAt",
+                        "completedAt"
+                      ],
+                      "additionalProperties": false
+                    }
+                  },
+                  "required": [
+                    "data"
+                  ],
+                  "additionalProperties": false
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid data, or the order cannot be picked",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No sales order with this id",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/pick-tasks/{id}": {
+      "get": {
+        "tags": [
+          "Picking"
+        ],
+        "summary": "Get a pick task with its lines",
+        "description": "Lines are ordered by location code.",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "The task and its lines",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "data": {
+                      "type": "object",
+                      "properties": {
+                        "id": {
+                          "type": "string",
+                          "format": "uuid"
+                        },
+                        "salesOrderId": {
+                          "type": "string",
+                          "format": "uuid"
+                        },
+                        "orderNumber": {
+                          "type": "string"
+                        },
+                        "customer": {
+                          "type": "string"
+                        },
+                        "status": {
+                          "type": "string",
+                          "enum": [
+                            "PENDING",
+                            "IN_PROGRESS",
+                            "COMPLETED",
+                            "CANCELLED"
+                          ]
+                        },
+                        "createdAt": {
+                          "type": "string",
+                          "format": "date-time"
+                        },
+                        "completedAt": {
+                          "anyOf": [
+                            {
+                              "type": "string",
+                              "format": "date-time"
+                            },
+                            {
+                              "type": "null"
+                            }
+                          ]
+                        },
+                        "items": {
+                          "type": "array",
+                          "items": {
+                            "type": "object",
+                            "properties": {
+                              "id": {
+                                "type": "string",
+                                "format": "uuid"
+                              },
+                              "salesOrderItemId": {
+                                "type": "string",
+                                "format": "uuid"
+                              },
+                              "productId": {
+                                "type": "string",
+                                "format": "uuid"
+                              },
+                              "sku": {
+                                "type": "string"
+                              },
+                              "productName": {
+                                "type": "string"
+                              },
+                              "locationId": {
+                                "type": "string",
+                                "format": "uuid"
+                              },
+                              "locationCode": {
+                                "type": "string"
+                              },
+                              "quantity": {
+                                "type": "integer",
+                                "minimum": -9007199254740991,
+                                "maximum": 9007199254740991
+                              },
+                              "pickedQuantity": {
+                                "type": "integer",
+                                "minimum": -9007199254740991,
+                                "maximum": 9007199254740991
+                              }
+                            },
+                            "required": [
+                              "id",
+                              "salesOrderItemId",
+                              "productId",
+                              "sku",
+                              "productName",
+                              "locationId",
+                              "locationCode",
+                              "quantity",
+                              "pickedQuantity"
+                            ],
+                            "additionalProperties": false
+                          }
+                        }
+                      },
+                      "required": [
+                        "id",
+                        "salesOrderId",
+                        "orderNumber",
+                        "customer",
+                        "status",
+                        "createdAt",
+                        "completedAt",
+                        "items"
+                      ],
+                      "additionalProperties": false
+                    }
+                  },
+                  "required": [
+                    "data"
+                  ],
+                  "additionalProperties": false
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "The id is not a UUID",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No pick task with this id",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/pick-tasks/items/{itemId}/pick": {
+      "post": {
+        "tags": [
+          "Picking"
+        ],
+        "summary": "Record a pick against a task line",
+        "description": "Removes the quantity from on-hand and reserved, writes a PICK movement and updates task and order status. 400 also covers picking more than the line or the allocation.",
+        "parameters": [
+          {
+            "name": "itemId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "quantity": {
+                    "type": "integer",
+                    "exclusiveMinimum": 0,
+                    "maximum": 9007199254740991
+                  },
+                  "reason": {
+                    "type": "string",
+                    "maxLength": 500
+                  }
+                },
+                "required": [
+                  "quantity"
+                ]
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "What was picked",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "data": {
+                      "type": "object",
+                      "properties": {
+                        "pickTaskId": {
+                          "type": "string",
+                          "format": "uuid"
+                        },
+                        "pickTaskItemId": {
+                          "type": "string",
+                          "format": "uuid"
+                        },
+                        "productId": {
+                          "type": "string",
+                          "format": "uuid"
+                        },
+                        "locationId": {
+                          "type": "string",
+                          "format": "uuid"
+                        },
+                        "quantity": {
+                          "type": "integer",
+                          "minimum": -9007199254740991,
+                          "maximum": 9007199254740991
+                        },
+                        "taskStatus": {
+                          "type": "string",
+                          "enum": [
+                            "PENDING",
+                            "IN_PROGRESS",
+                            "COMPLETED",
+                            "CANCELLED"
+                          ],
+                          "description": "The task's status after this pick."
+                        }
+                      },
+                      "required": [
+                        "pickTaskId",
+                        "pickTaskItemId",
+                        "productId",
+                        "locationId",
+                        "quantity",
+                        "taskStatus"
+                      ],
+                      "additionalProperties": false
+                    }
+                  },
+                  "required": [
+                    "data"
+                  ],
+                  "additionalProperties": false
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid data, or the pick is not allowed",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No pick task line with this id",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      }
     }
   },
   "components": {
