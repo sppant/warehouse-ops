@@ -1,0 +1,29 @@
+name: MCP Server
+
+# Not part of deploy.yml: the MCP server runs on a developer's machine and is
+# never deployed.
+on:
+  pull_request:
+    paths:
+      - "packages/mcp-server/**"
+      - "package-lock.json"
+      - ".github/workflows/mcp-server.yml"
+
+jobs:
+  build-and-test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - run: npm ci
+
+      - name: Build
+        run: npm run build -w packages/mcp-server
+
+      - name: Unit tests
+        run: npm test -w packages/mcp-server
