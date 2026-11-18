@@ -36,7 +36,10 @@ See [`docs/domain-model.md`](docs/domain-model.md) for the full domain model and
 
 - **API** (`apps/api`) — Fastify, Drizzle ORM, PostgreSQL, Zod, TypeScript, Vitest
 - **Web** (`apps/web`) — React, Vite, React Router, TypeScript
-- Modular monolith: each domain (products, warehouses, inventory, purchase-orders, sales-orders, picking, cycle-counts) is a self-contained module with its own schema, repository, service, and routes
+- **MCP server** (`packages/mcp-server`) — read-only [Model Context Protocol](https://modelcontextprotocol.io) server (stdio) that lets an AI client search items, check stock, list low stock and read stock movements through the API. See [`packages/mcp-server/README.md`](packages/mcp-server/README.md)
+- **Deployment** — Docker images published to GHCR, run with Docker Compose (PostgreSQL 16, API, migrations, nginx-served web app) behind Caddy on a single EC2 host
+- npm workspaces monorepo: `apps/api`, `apps/web`, `packages/mcp-server`, `packages/shared` (placeholder, currently empty)
+- The API is a modular monolith: each domain (products, warehouses, inventory, purchase-orders, sales-orders, picking, cycle-counts) is a self-contained module with its own schema, repository, service, and routes
 
 ## Getting started
 
@@ -65,6 +68,13 @@ DATABASE_URL=postgresql://<user>@localhost:5432/warehouse_ops
 npm run db:migrate -w apps/api
 ```
 
+### Seed demo data (optional)
+
+```bash
+npm run db:seed -w apps/api        # demo warehouse DC-01 with products, orders, picks and counts; does nothing if it already exists
+npm run db:seed:bulk -w apps/api   # large dataset for performance work (see "Performance notes"); use a throwaway database
+```
+
 ### Start the dev servers
 
 ```bash
@@ -81,6 +91,17 @@ npm run openapi:check -w apps/api      # is apps/api/openapi.json up to date?
 npm run test -w packages/mcp-server    # MCP server tests
 npm run lint -w apps/web
 ```
+
+## Deployment
+
+A push to `main` runs `.github/workflows/deploy.yml`:
+
+1. Runs the API and web workflows (lint, tests, build, `openapi:check`).
+2. Builds and pushes three images to GHCR, tagged with the commit SHA and `latest`: `warehouse-ops-api`, `warehouse-ops-migrate` and `warehouse-ops-web`.
+3. Over SSH, copies `compose.yaml` and the Caddyfile to the EC2 host, pulls the new images, starts the database, runs migrations, runs the demo seed (a no-op once the data exists), then brings the stack up.
+4. Polls `https://<host>/health` until it answers.
+
+`compose.yaml` needs `POSTGRES_PASSWORD` in a `.env` next to it on the host. Caddy terminates TLS and proxies to the `web` container, whose nginx serves the static app and forwards `/api` and `/health` to the API. The MCP server is not deployed; it runs locally next to an AI client.
 
 ## API contract
 
